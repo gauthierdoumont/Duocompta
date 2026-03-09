@@ -1,0 +1,2521 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0e0f14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="DuoCompta">
+<title>DuoCompta</title>
+<link rel="manifest" href="manifest.json">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+:root{
+  --bg:#0e0f14;--bg2:#13141a;--bg3:#1a1b24;
+  --surf:#1e202c;--surf2:#252838;--surf3:#2d3044;
+  --bdr:rgba(255,255,255,.06);--bdr2:rgba(255,255,255,.11);
+  --gold:#c9a84c;--gold2:#e2c06a;--gold3:#f5dfa0;
+  --green:#3d9970;--green2:#52c98f;
+  --red:#c0392b;--red2:#e74c3c;
+  --blue:#2980b9;--blue2:#3498db;--pk:#9b59b6;
+  --tx:#ecedf5;--tx2:#9395a8;--tx3:#5a5c72;
+  --r:12px;--rs:8px;--nh:64px;--safe:env(safe-area-inset-bottom,0px);
+  --gg:linear-gradient(135deg,var(--gold),#a07828);
+  --gs:0 0 32px rgba(201,168,76,.2);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-family:"DM Sans",sans-serif;}
+::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-thumb{background:var(--surf3);}
+input,select,textarea,button{font-family:inherit;}
+#app{height:100%;display:flex;flex-direction:column;}
+.screen{display:none;flex:1;flex-direction:column;overflow:hidden;}
+.screen.active{display:flex;}
+
+/* ONBOARDING */
+#s-start{align-items:center;justify-content:flex-start;overflow-y:auto;
+  padding:24px 16px calc(40px + var(--safe));background:var(--bg);
+  background-image:radial-gradient(ellipse 70% 50% at 15% 25%,rgba(201,168,76,.1),transparent 55%),
+    radial-gradient(ellipse 50% 40% at 85% 75%,rgba(61,153,112,.07),transparent 50%);}
+.ob-lines{position:fixed;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(201,168,76,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(201,168,76,.04) 1px,transparent 1px);
+  background-size:48px 48px;animation:linesDrift 25s linear infinite;}
+@keyframes linesDrift{to{background-position:48px 48px;}}
+.ob-box{position:relative;width:100%;max-width:420px;margin:auto;
+  padding:44px 28px 36px;background:rgba(30,32,44,.95);
+  border:1px solid rgba(201,168,76,.2);border-radius:20px;
+  backdrop-filter:blur(24px);
+  box-shadow:0 40px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(201,168,76,.12);
+  animation:obIn .7s cubic-bezier(.34,1.2,.64,1) both;}
+@keyframes obIn{from{opacity:0;transform:translateY(28px) scale(.97);}to{opacity:1;transform:none;}}
+.ob-logo{font-family:"Cormorant Garamond",serif;font-size:38px;font-weight:700;
+  background:linear-gradient(135deg,var(--gold2),var(--gold3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:2px;}
+.ob-author{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--tx3);margin-bottom:8px;}
+.ob-tagline{font-family:"Cormorant Garamond",serif;font-size:17px;font-style:italic;color:var(--tx2);margin-bottom:28px;}
+.ob-divider{height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.3),transparent);margin-bottom:28px;}
+.flbl{font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:var(--tx3);display:block;margin-bottom:7px;}
+.finp{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--bdr2);border-radius:var(--rs);
+  padding:13px 15px;color:var(--tx);font-size:15px;margin-bottom:16px;outline:none;transition:all .25s;}
+.finp:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,.12);}
+.finp::placeholder{color:var(--tx3);}
+.finp option{background:#1e202c;color:var(--tx);}
+.ob-btn{width:100%;border:none;border-radius:var(--rs);padding:15px;
+  background:var(--gg);color:#0e0f14;font-size:15px;font-weight:600;
+  cursor:pointer;transition:all .2s;box-shadow:var(--gs);}
+.ob-btn:active{transform:scale(.97);opacity:.9;}
+.ob-hint{font-size:11px;color:var(--tx3);margin-top:-10px;margin-bottom:16px;line-height:1.65;}
+.ob-err{background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.3);
+  color:#e88;padding:10px 14px;border-radius:var(--rs);font-size:13px;margin-bottom:16px;display:none;}
+.ob-footer{font-size:11px;color:var(--tx3);text-align:center;
+  margin-top:20px;line-height:1.8;padding-top:16px;border-top:1px solid var(--bdr);}
+
+/* APP SHELL */
+#s-app{background:var(--bg);}
+.topbar{height:56px;background:var(--bg2);border-bottom:1px solid var(--bdr);
+  display:flex;align-items:center;padding:0 16px;gap:10px;flex-shrink:0;position:relative;}
+.topbar::after{content:"";position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.25;}
+.tb-brand{font-family:"Cormorant Garamond",serif;font-size:22px;font-weight:700;flex:1;
+  background:linear-gradient(135deg,var(--gold2),var(--gold3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.tb-user{display:flex;align-items:center;gap:8px;cursor:pointer;}
+.tb-nm{font-size:13px;font-weight:500;color:var(--tx2);}
+.tb-ai{font-family:"DM Mono",monospace;font-size:10px;padding:3px 9px;border-radius:20px;
+  background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.25);color:var(--gold2);}
+.content-area{flex:1;overflow:hidden;position:relative;}
+.page{position:absolute;inset:0;overflow-y:auto;display:none;
+  padding:18px 14px calc(var(--nh)+16px+var(--safe));}
+.page.active{display:block;}
+
+/* BOTTOM NAV */
+.bnav{height:var(--nh);background:var(--bg2);border-top:1px solid var(--bdr);
+  display:flex;align-items:center;padding-bottom:var(--safe);flex-shrink:0;position:relative;}
+.bnav::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.2;}
+.bni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;cursor:pointer;color:var(--tx3);padding:6px 2px;position:relative;transition:color .2s;}
+.bni.active{color:var(--gold2);}
+.bni.active::after{content:"";position:absolute;top:-1px;left:50%;transform:translateX(-50%);
+  width:24px;height:2px;background:var(--gold);border-radius:0 0 4px 4px;box-shadow:var(--gs);}
+.bni-ic{font-size:19px;transition:transform .2s;}
+.bni.active .bni-ic{transform:translateY(-1px);}
+.bni-lb{font-size:9px;font-weight:500;letter-spacing:.2px;}
+
+/* COMMON */
+.pg-title{font-family:"Cormorant Garamond",serif;font-size:26px;font-weight:700;margin-bottom:4px;}
+.pg-sub{font-size:13px;color:var(--tx2);margin-bottom:18px;}
+.sec-ttl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--tx3);
+  margin:20px 0 10px;display:flex;align-items:center;gap:9px;}
+.sec-ttl::after{content:"";flex:1;height:1px;background:var(--bdr);}
+.btn{padding:11px 18px;border-radius:var(--rs);font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .2s;border:none;
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;}
+.btn:active{transform:scale(.96);}
+.btn-gold{background:var(--gg);color:#0e0f14;box-shadow:var(--gs);}
+.btn-green{background:linear-gradient(135deg,var(--green),#2d7a55);color:#fff;}
+.btn-ghost{background:var(--surf2);color:var(--tx2);border:1px solid var(--bdr2);}
+.btn-full{width:100%;}
+.empty-hint{font-size:13px;color:var(--tx3);text-align:center;padding:20px;font-style:italic;}
+.icon-btn{background:none;border:none;cursor:pointer;font-size:16px;color:var(--tx3);padding:4px;transition:color .15s;}
+.icon-btn:active{color:var(--red2);}
+
+/* DASHBOARD */
+.dash-hero{background:linear-gradient(135deg,rgba(201,168,76,.12),rgba(61,153,112,.08));
+  border:1px solid rgba(201,168,76,.18);border-radius:var(--r);
+  padding:20px;margin-bottom:16px;position:relative;overflow:hidden;}
+.dash-hero::before{content:"DC";position:absolute;right:-8px;top:-8px;
+  font-family:"Cormorant Garamond",serif;font-size:90px;font-weight:700;
+  color:rgba(201,168,76,.06);pointer-events:none;}
+.dash-greeting{font-family:"Cormorant Garamond",serif;font-size:24px;font-weight:600;
+  line-height:1.2;margin-bottom:4px;}
+.dash-greeting em{color:var(--gold2);font-style:normal;}
+.dash-sub{font-size:13px;color:var(--tx2);}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:2px;}
+.stat{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:14px;position:relative;overflow:hidden;}
+.stat::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--sc,var(--gold));}
+.stat.gr{--sc:var(--green2);}.stat.bl{--sc:var(--blue2);}.stat.rd{--sc:var(--red2);}
+.stat-ic{font-size:17px;margin-bottom:7px;}
+.stat-v{font-family:"Cormorant Garamond",serif;font-size:28px;font-weight:700;line-height:1;}
+.stat-l{font-size:10px;color:var(--tx3);margin-top:3px;text-transform:uppercase;letter-spacing:.7px;}
+
+/* MODULE CARDS */
+.mod-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.mcard{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:14px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.mcard::before{content:"";position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:var(--mc,var(--gold));transform:scaleX(0);transition:transform .2s;}
+.mcard:active{border-color:var(--mc,var(--gold));transform:scale(.97);}
+.mcard:active::before{transform:scaleX(1);}
+.mc-ic{font-size:24px;margin-bottom:8px;}
+.mc-nm{font-family:"Cormorant Garamond",serif;font-size:15px;font-weight:700;margin-bottom:2px;}
+.mc-ds{font-size:11px;color:var(--tx3);line-height:1.4;}
+
+/* MODULE LIST */
+.ml{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:14px;cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;gap:12px;margin-bottom:9px;}
+.ml:active{transform:scale(.98);border-color:rgba(201,168,76,.3);}
+.ml-ic{font-size:28px;flex-shrink:0;}
+.ml-nm{font-family:"Cormorant Garamond",serif;font-size:16px;font-weight:700;margin-bottom:2px;}
+.ml-ds{font-size:11px;color:var(--tx3);line-height:1.4;}
+.ml-ar{color:var(--tx3);font-size:18px;margin-left:auto;flex-shrink:0;}
+.fsel{background:var(--surf2);border:1px solid var(--bdr2);border-radius:var(--rs);
+  padding:10px 13px;font-size:14px;color:var(--tx);width:100%;
+  outline:none;margin-bottom:14px;cursor:pointer;transition:border-color .2s;}
+.fsel:focus{border-color:var(--gold);}
+.fsel option{background:#1e202c;}
+
+/* FOLDERS */
+.fcard{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);
+  margin-bottom:10px;position:relative;overflow:hidden;}
+.fcard::before{content:"";position:absolute;top:0;left:0;bottom:0;width:3px;
+  background:linear-gradient(to bottom,var(--gold),var(--green));}
+.fcard-in{padding:14px 14px 14px 17px;}
+.ftop{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;}
+.f-ic{font-size:21px;flex-shrink:0;}
+.f-nm{font-family:"Cormorant Garamond",serif;font-size:16px;font-weight:700;margin-bottom:2px;}
+.f-ds{font-size:12px;color:var(--tx3);line-height:1.4;}
+.f-actions{display:flex;gap:7px;margin-top:10px;}
+.f-btn{padding:6px 12px;border-radius:6px;font-size:12px;font-weight:500;
+  cursor:pointer;border:1px solid var(--bdr2);background:var(--surf2);color:var(--tx2);transition:all .15s;}
+.f-btn:active{border-color:var(--gold);color:var(--gold2);}
+.file-list{margin-top:8px;}
+.file-item{display:flex;align-items:center;gap:10px;background:var(--surf2);
+  border:1px solid var(--bdr);border-radius:var(--rs);padding:9px 12px;margin-bottom:6px;}
+.file-ic{font-size:17px;flex-shrink:0;}
+.file-nm{font-size:13px;font-weight:500;flex:1;}
+.file-meta{font-size:11px;color:var(--tx3);}
+.file-del{font-size:15px;color:var(--tx3);cursor:pointer;padding:4px;flex-shrink:0;transition:color .15s;}
+.file-del:active{color:var(--red2);}
+.fstats{display:flex;gap:7px;flex-wrap:wrap;}
+.fstat{font-size:11px;background:var(--surf2);padding:3px 9px;border-radius:20px;color:var(--tx3);}
+.add-f{border:1.5px dashed var(--bdr2);border-radius:var(--r);padding:20px;
+  text-align:center;cursor:pointer;color:var(--tx3);font-size:13px;font-weight:500;transition:all .2s;}
+.add-f:active{border-color:var(--gold);color:var(--gold2);}
+.srch{width:100%;background:var(--surf);border:1px solid var(--bdr);border-radius:var(--rs);
+  padding:11px 14px;color:var(--tx);font-size:14px;outline:none;transition:all .2s;margin-bottom:12px;}
+.srch:focus{border-color:var(--gold);}
+.srch::placeholder{color:var(--tx3);}
+
+/* UPLOAD ZONE */
+.upload-zone{border:2px dashed var(--bdr2);border-radius:var(--r);
+  padding:24px 16px;text-align:center;cursor:pointer;transition:all .25s;
+  margin-bottom:12px;position:relative;overflow:hidden;}
+.upload-zone.drag{border-color:var(--gold);background:rgba(201,168,76,.05);}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.uz-ic{font-size:28px;margin-bottom:8px;}
+.uz-txt{font-size:14px;font-weight:500;color:var(--tx);margin-bottom:4px;}
+.uz-sub{font-size:12px;color:var(--tx3);}
+.uz-formats{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-top:8px;}
+.uz-fmt{font-size:10px;padding:2px 7px;border-radius:4px;background:var(--surf3);color:var(--tx3);font-family:"DM Mono",monospace;}
+.prog-bar{height:4px;background:var(--surf3);border-radius:2px;overflow:hidden;margin-bottom:10px;}
+.prog-fill{height:100%;background:var(--gg);border-radius:2px;transition:width .3s ease;}
+
+/* PROFILE */
+.prof-hero{background:linear-gradient(135deg,rgba(201,168,76,.12),rgba(61,153,112,.08));
+  border:1px solid rgba(201,168,76,.18);border-radius:var(--r);
+  padding:24px;text-align:center;margin-bottom:16px;}
+.prof-av{font-size:48px;margin-bottom:10px;}
+.prof-nm{font-family:"Cormorant Garamond",serif;font-size:24px;font-weight:700;}
+.prof-lv{font-size:13px;color:var(--tx2);margin-top:4px;}
+.prof-ai{margin-top:10px;}
+.srow{display:flex;align-items:center;gap:12px;background:var(--surf);
+  border:1px solid var(--bdr);border-radius:var(--rs);padding:13px;
+  margin-bottom:8px;cursor:pointer;transition:all .2s;}
+.srow:active{background:var(--surf2);border-color:rgba(201,168,76,.2);}
+.s-ic{font-size:18px;flex-shrink:0;}.s-tx{flex:1;}
+.s-lb{font-weight:600;font-size:14px;}.s-sb{font-size:12px;color:var(--tx3);margin-top:1px;}
+.s-ar{color:var(--tx3);font-size:16px;}
+.chip{display:inline-flex;align-items:center;font-size:11px;font-weight:600;
+  padding:3px 10px;border-radius:20px;}
+.chip-g{background:rgba(201,168,76,.12);color:var(--gold2);border:1px solid rgba(201,168,76,.22);}
+
+/* LEARNING ENGINE */
+#s-learn{background:var(--bg);}
+.ltop{display:flex;align-items:center;gap:10px;padding:12px 14px;
+  background:var(--bg2);border-bottom:1px solid var(--bdr);flex-shrink:0;}
+.lback{width:34px;height:34px;border-radius:50%;background:var(--surf2);
+  border:1px solid var(--bdr);color:var(--tx2);font-size:15px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;}
+.lback:active{background:var(--surf3);color:var(--tx);}
+.l-nm{font-family:"Cormorant Garamond",serif;font-size:16px;font-weight:700;flex:1;}
+.l-pw{flex:1;}
+.l-pt{height:4px;background:var(--surf2);border-radius:2px;overflow:hidden;}
+.l-pf{height:100%;border-radius:2px;transition:width .5s ease;background:var(--gg);}
+.l-ct{font-family:"DM Mono",monospace;font-size:10px;color:var(--tx3);margin-top:3px;}
+.l-badge{background:var(--red2);color:#fff;font-family:"DM Mono",monospace;
+  font-size:12px;font-weight:700;padding:4px 10px;border-radius:var(--rs);
+  display:none;align-items:center;flex-shrink:0;}
+.l-badge-warn{background:var(--red2);animation:pulse .8s ease infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.6;}}
+.lcont{flex:1;overflow-y:auto;padding:16px 14px 26px;display:flex;flex-direction:column;}
+.gload{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;}
+.gsp{width:42px;height:42px;border-radius:50%;border:3px solid var(--surf3);
+  border-top-color:var(--gold);animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.g-t{font-family:"Cormorant Garamond",serif;font-size:20px;font-weight:600;}
+.g-s{font-size:13px;color:var(--tx3);}
+.g-dots{display:flex;gap:6px;justify-content:center;}
+.g-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);
+  animation:gdot 1.4s ease infinite;opacity:.3;}
+.g-dot:nth-child(2){animation-delay:.2s;}.g-dot:nth-child(3){animation-delay:.4s;}
+@keyframes gdot{0%,80%,100%{opacity:.3;transform:scale(1);}40%{opacity:1;transform:scale(1.3);}}
+
+/* RESULT */
+.rscreen{flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:24px 16px;text-align:center;gap:12px;}
+.r-medal{font-size:66px;animation:medal .6s cubic-bezier(.34,1.4,.64,1) both;}
+@keyframes medal{from{transform:scale(0) rotate(-10deg);opacity:0;}to{transform:none;opacity:1;}}
+.r-score{font-family:"Cormorant Garamond",serif;font-size:52px;font-weight:700;line-height:1;
+  background:var(--gg);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.r-pct{font-size:14px;color:var(--tx2);}
+.r-msg{font-family:"Cormorant Garamond",serif;font-size:17px;font-style:italic;
+  color:var(--tx2);max-width:260px;line-height:1.65;}
+.r-btns{display:flex;flex-direction:column;gap:8px;width:100%;max-width:280px;margin-top:4px;}
+
+/* FLASHCARDS */
+.fc-wrap{flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:14px 0;perspective:1000px;}
+.fc{width:100%;max-width:340px;height:210px;cursor:pointer;
+  transform-style:preserve-3d;transition:transform .55s ease;position:relative;}
+.fc.flip{transform:rotateY(180deg);}
+.fc-face{position:absolute;inset:0;border-radius:14px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:22px;text-align:center;
+  backface-visibility:hidden;border:1px solid var(--bdr2);}
+.fc-fr{background:linear-gradient(135deg,var(--surf),var(--bg3));box-shadow:0 18px 40px rgba(0,0,0,.4);}
+.fc-bk{transform:rotateY(180deg);
+  background:linear-gradient(135deg,rgba(201,168,76,.12),rgba(61,153,112,.1));
+  border-color:rgba(201,168,76,.25);}
+.fc-lb{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--tx3);
+  margin-bottom:10px;font-family:"DM Mono",monospace;}
+.fc-tx{font-family:"Cormorant Garamond",serif;font-size:18px;font-weight:600;line-height:1.4;}
+.fc-bk .fc-tx{font-size:14px;font-weight:400;font-family:"DM Sans",sans-serif;line-height:1.65;}
+.fc-hint{font-size:11px;color:var(--tx3);margin-top:10px;}
+.fc-dots{display:flex;gap:5px;justify-content:center;padding:8px 0;}
+.fcd{width:6px;height:6px;border-radius:50%;background:var(--surf3);transition:all .3s;}
+.fcd.active{background:var(--gold);transform:scale(1.3);}
+.fcd.done{background:var(--green2);}
+.fc-acts{display:flex;gap:7px;padding:0 14px 12px;justify-content:center;}
+.fc-btn{flex:1;max-width:110px;padding:11px 6px;border-radius:var(--rs);
+  font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .2s;text-align:center;}
+.fc-no{background:rgba(192,57,43,.14);color:var(--red2);border:1px solid rgba(192,57,43,.24);}
+.fc-med{background:rgba(201,168,76,.12);color:var(--gold2);border:1px solid rgba(201,168,76,.22);}
+.fc-yes{background:rgba(61,153,112,.14);color:var(--green2);border:1px solid rgba(61,153,112,.22);}
+.fc-btn:active{transform:scale(.93);}
+.sr-badge{font-size:10px;margin-top:8px;padding:3px 10px;border-radius:20px;font-family:"DM Mono",monospace;}
+.sr-due{background:rgba(192,57,43,.2);color:var(--red2);}
+.sr-ok{background:rgba(61,153,112,.15);color:var(--green2);}
+
+/* QCM */
+.qcard{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:18px;margin-bottom:12px;}
+.q-num{font-family:"DM Mono",monospace;font-size:11px;color:var(--tx3);letter-spacing:1px;margin-bottom:10px;}
+.q-q{font-family:"Cormorant Garamond",serif;font-size:19px;font-weight:600;line-height:1.4;margin-bottom:16px;}
+.q-opts{display:flex;flex-direction:column;gap:8px;}
+.qopt{padding:12px 13px;border:1px solid var(--bdr2);border-radius:var(--rs);
+  cursor:pointer;transition:all .2s;font-size:14px;
+  display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.02);}
+.qopt:active{border-color:var(--gold);}
+.qopt.correct{border-color:var(--green2)!important;background:rgba(61,153,112,.09)!important;color:var(--green2);}
+.qopt.wrong{border-color:var(--red2)!important;background:rgba(192,57,43,.09)!important;color:var(--red2);}
+.opt-l{width:24px;height:24px;border-radius:50%;border:1px solid currentColor;
+  display:flex;align-items:center;justify-content:center;
+  font-family:"DM Mono",monospace;font-size:10px;font-weight:700;flex-shrink:0;opacity:.65;}
+.q-exp{margin-top:10px;padding:10px 13px;background:rgba(201,168,76,.07);
+  border-left:3px solid var(--gold);border-radius:0 var(--rs) var(--rs) 0;
+  font-size:13px;line-height:1.65;color:var(--tx2);display:none;}
+.q-exp.show{display:block;animation:fU .3s ease;}
+@keyframes fU{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+
+/* VRAI/FAUX */
+.vcard{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:22px 16px;margin-bottom:14px;text-align:center;}
+.v-stmt{font-family:"Cormorant Garamond",serif;font-size:19px;font-weight:600;
+  line-height:1.45;margin-bottom:18px;}
+.vf-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.vfb{padding:14px;border-radius:var(--r);border:2px solid var(--bdr2);
+  font-family:"Cormorant Garamond",serif;font-size:20px;font-weight:700;
+  cursor:pointer;transition:all .2s;background:rgba(255,255,255,.02);
+  display:flex;flex-direction:column;align-items:center;gap:4px;}
+.vfb span{font-family:"DM Sans",sans-serif;font-size:10px;font-weight:600;
+  letter-spacing:1px;text-transform:uppercase;}
+.vfb:active{transform:scale(.95);}
+.vfb.correct{border-color:var(--green2)!important;background:rgba(61,153,112,.1)!important;}
+.vfb.wrong{border-color:var(--red2)!important;background:rgba(192,57,43,.1)!important;}
+.v-exp{background:var(--surf2);border-radius:var(--rs);padding:11px 13px;
+  font-size:13px;line-height:1.65;color:var(--tx2);display:none;margin-bottom:10px;}
+.v-exp.show{display:block;animation:fU .3s ease;}
+
+/* FILL */
+.ficard{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:18px;margin-bottom:12px;}
+.fi-q{font-family:"Cormorant Garamond",serif;font-size:18px;font-weight:600;line-height:1.5;margin-bottom:14px;}
+.fi-blank{display:inline-block;min-width:90px;border-bottom:2px solid var(--gold);
+  padding:2px 6px;color:var(--gold2);font-style:italic;}
+.fi-inp{width:100%;background:rgba(255,255,255,.04);border:1.5px solid var(--bdr2);
+  border-radius:var(--rs);padding:11px 13px;color:var(--tx);
+  font-size:16px;outline:none;transition:all .2s;margin-bottom:10px;}
+.fi-inp:focus{border-color:var(--gold);}
+.fi-inp.ok{border-color:var(--green2)!important;background:rgba(61,153,112,.07)!important;}
+.fi-inp.ko{border-color:var(--red2)!important;background:rgba(192,57,43,.07)!important;}
+.fi-ans{font-size:13px;color:var(--tx2);display:none;margin-bottom:8px;}
+.fi-ans.show{display:block;animation:fU .3s ease;}
+
+/* MATCH */
+.match-instr{font-size:13px;color:var(--tx2);margin-bottom:10px;font-style:italic;}
+.match-wrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.mt{background:var(--surf);border:1.5px solid var(--bdr2);border-radius:var(--r);
+  padding:11px;cursor:pointer;transition:all .2s;}
+.mt:active,.mt.sel{border-color:var(--gold);background:rgba(201,168,76,.08);}
+.mt.ok{border-color:var(--green2);background:rgba(61,153,112,.07);pointer-events:none;}
+.mt.ko{border-color:var(--red2);animation:shk .4s ease;}
+@keyframes shk{0%,100%{transform:none;}25%{transform:translateX(-5px);}75%{transform:translateX(5px);}}
+.mt-w{font-family:"Cormorant Garamond",serif;font-size:13px;font-weight:600;}
+.mt-d{font-size:11px;color:var(--tx3);margin-top:3px;display:none;line-height:1.4;}
+.mt.ok .mt-d{display:block;color:var(--green2);}
+
+/* SUMMARY / GLOSSARY */
+.sumc{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:18px;font-size:14px;line-height:1.85;color:var(--tx2);}
+.sumc h1,.sumc h2,.sumc h3{font-family:"Cormorant Garamond",serif;color:var(--tx);margin:14px 0 7px;}
+.sumc h1{font-size:22px;}.sumc h2{font-size:18px;color:var(--gold2);}.sumc h3{font-size:15px;color:var(--green2);}
+.sumc strong{color:var(--tx);font-weight:600;}
+.sumc ul,.sumc ol{margin:5px 0 5px 18px;}.sumc li{margin-bottom:3px;}
+.gloss-item{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--rs);
+  padding:12px 14px;margin-bottom:8px;transition:border-color .2s;}
+.gloss-item:active{border-color:var(--gold);}
+.gloss-term{font-family:"Cormorant Garamond",serif;font-size:16px;font-weight:700;margin-bottom:4px;color:var(--gold2);}
+.gloss-def{font-size:13px;color:var(--tx2);line-height:1.6;}
+
+/* STATS PAGE */
+.goal-card{background:linear-gradient(135deg,rgba(201,168,76,.1),rgba(61,153,112,.07));
+  border:1px solid rgba(201,168,76,.2);border-radius:var(--r);padding:14px;margin-bottom:4px;}
+.goal-top{display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:2px;}
+.chart-wrap{display:flex;align-items:flex-end;gap:5px;height:90px;
+  background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:10px;overflow-x:auto;}
+.bar-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:18px;flex:1;}
+.bar{width:100%;border-radius:3px 3px 0 0;min-height:3px;transition:height .4s ease;}
+.bar-lbl{font-family:"DM Mono",monospace;font-size:9px;color:var(--tx3);}
+.module-stats{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:12px;}
+.stat-row{display:flex;align-items:center;gap:8px;padding:7px 0;
+  border-bottom:1px solid var(--bdr);}
+.stat-row:last-child{border-bottom:none;}
+.sr-ic{font-size:16px;flex-shrink:0;}
+.sr-nm{font-size:13px;font-weight:500;flex:0 0 80px;}
+.sr-cnt{font-size:11px;color:var(--tx3);flex:0 0 70px;font-family:"DM Mono",monospace;}
+.sr-bar{flex:1;height:5px;background:var(--surf3);border-radius:3px;overflow:hidden;}
+.sr-fill{height:100%;border-radius:3px;transition:width .5s ease;}
+.sr-pct{font-family:"DM Mono",monospace;font-size:11px;color:var(--tx2);flex:0 0 36px;text-align:right;}
+.badges-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;}
+.badge{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:12px 8px;text-align:center;transition:all .2s;}
+.badge-on{border-color:rgba(201,168,76,.35);background:rgba(201,168,76,.06);}
+.badge-off{opacity:.4;}
+.badge-ic{font-size:22px;margin-bottom:5px;}
+.badge-lb{font-size:10px;color:var(--tx3);line-height:1.3;}
+.badge-on .badge-lb{color:var(--gold2);}
+
+/* POMODORO */
+.pom-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:20px;text-align:center;}
+.pom-state{font-size:13px;font-weight:600;color:var(--tx2);margin-bottom:16px;letter-spacing:.5px;}
+.pom-ring{position:relative;width:160px;height:160px;margin:0 auto 14px;}
+.pom-ring svg{width:100%;height:100%;}
+.pom-time{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:"DM Mono",monospace;font-size:28px;font-weight:500;color:var(--tx);}
+.pom-cycles{font-size:12px;color:var(--tx3);margin-bottom:14px;}
+.pom-btns{display:flex;gap:9px;justify-content:center;margin-bottom:18px;}
+.pom-settings{border-top:1px solid var(--bdr);padding-top:14px;text-align:left;}
+
+/* MODAL */
+.mov{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;
+  display:flex;align-items:flex-end;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .25s;backdrop-filter:blur(10px);}
+.mov.open{opacity:1;pointer-events:all;}
+.mbox{background:var(--bg2);border:1px solid var(--bdr2);border-radius:18px 18px 0 0;
+  width:100%;max-width:520px;padding:20px 16px calc(20px + var(--safe));
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.34,1.1,.64,1);
+  max-height:90vh;overflow-y:auto;}
+.mov.open .mbox{transform:translateY(0);}
+.mhandle{width:32px;height:4px;background:var(--surf3);border-radius:2px;margin:0 auto 16px;}
+.m-t{font-family:"Cormorant Garamond",serif;font-size:20px;font-weight:700;margin-bottom:4px;}
+.m-s{font-size:13px;color:var(--tx3);margin-bottom:18px;}
+.m-lb{font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:var(--tx3);display:block;margin-bottom:7px;}
+.m-in{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--bdr2);
+  border-radius:var(--rs);padding:11px 13px;color:var(--tx);
+  font-size:14px;outline:none;transition:all .2s;margin-bottom:13px;}
+.m-in:focus{border-color:var(--gold);}
+.m-in option{background:#1e202c;}
+.ic-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:13px;}
+.ico{font-size:20px;padding:7px;border:1px solid var(--bdr);border-radius:var(--rs);cursor:pointer;transition:all .15s;}
+.ico.sel{border-color:var(--gold);background:rgba(201,168,76,.15);transform:scale(1.1);}
+
+/* NOTIF */
+.notif{position:fixed;bottom:calc(var(--nh)+12px);left:50%;
+  transform:translateX(-50%) translateY(14px);opacity:0;
+  background:var(--surf2);color:var(--tx);padding:10px 16px;border-radius:var(--rs);
+  font-size:13px;font-weight:500;z-index:999;transition:all .3s;
+  white-space:nowrap;border-left:3px solid var(--gold);
+  box-shadow:0 8px 28px rgba(0,0,0,.5);max-width:90vw;text-align:center;}
+.notif.show{transform:translateX(-50%) translateY(0);opacity:1;}
+.notif.ok{border-left-color:var(--green2);}.notif.err{border-left-color:var(--red2);}
+.ibanner{display:none;padding:10px 14px;background:var(--gg);
+  color:#0e0f14;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:600;flex-shrink:0;}
+.ibanner.show{display:flex;}
+.ib-x{margin-left:auto;font-size:16px;opacity:.7;padding:3px;}
+</style>
+</head>
+<body>
+<div id="app">
+<div class="ibanner" id="ibanner" onclick="installPWA()">
+  <span>&#128242;</span><span>Installer DuoCompta sur cet appareil</span>
+  <span class="ib-x" onclick="event.stopPropagation();this.parentNode.classList.remove('show')">&#10005;</span>
+</div>
+
+<!-- ONBOARDING -->
+<div class="screen active" id="s-start">
+  <div class="ob-lines"></div>
+  <div class="ob-box">
+    <div class="ob-logo">DuoCompta</div>
+    <div class="ob-author">par Gauthier Doumont</div>
+    <div class="ob-tagline">Votre plateforme d&#39;etude intelligente</div>
+    <div class="ob-divider"></div>
+    <div class="ob-err" id="ob-err"></div>
+    <label class="flbl">Votre prenom</label>
+    <input class="finp" id="inp-name" placeholder="ex : Alice" autocomplete="name">
+    <label class="flbl">Niveau / Filiere</label>
+    <input class="finp" id="inp-level" placeholder="ex : L3 Comptabilite">
+    <label class="flbl">IA preferee</label>
+    <select class="finp" id="inp-ai" onchange="updHelp()">
+      <option value="groq">Groq &#8212; Llama 3.3 (Gratuit &#127881;)</option>
+      <option value="claude">Claude &#8212; Anthropic</option>
+      <option value="openai">ChatGPT &#8212; OpenAI</option>
+      <option value="gemini">Gemini &#8212; Google</option>
+    </select>
+    <label class="flbl" id="api-lbl">Cle API Claude</label>
+    <input class="finp" id="inp-key" placeholder="sk-ant-..." autocomplete="off" type="password">
+    <div class="ob-hint" id="api-hint">Gratuit : console.anthropic.com &gt; API Keys &gt; Create Key</div>
+    <button class="ob-btn" onclick="doStart()">Commencer &#8594;</button>
+    <div class="ob-footer">
+      &#128274; Donnees uniquement sur cet appareil &#8226; Aucun compte requis<br>
+      <span style="opacity:.6">&#169; DuoCompta &#8212; Gauthier Doumont</span>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="screen" id="s-app">
+  <div class="topbar">
+    <div class="tb-brand">DuoCompta</div>
+    <div class="tb-user" onclick="showPage('profile')">
+      <div class="tb-nm" id="tb-nm">&#8212;</div>
+      <div class="tb-ai" id="tb-ai">&#8212;</div>
+    </div>
+  </div>
+  <div class="content-area">
+
+    <!-- HOME -->
+    <div class="page active" id="page-home">
+      <div class="dash-hero">
+        <div class="dash-greeting" id="greeting">Bonjour, <em>&#8212;</em></div>
+        <div class="dash-sub">Que voulez-vous reviser aujourd&#39;hui ?</div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat"><div class="stat-ic">&#128193;</div><div class="stat-v" id="st-f">0</div><div class="stat-l">Dossiers</div></div>
+        <div class="stat gr"><div class="stat-ic">&#127919;</div><div class="stat-v" id="st-sc">&#8212;</div><div class="stat-l">Score moy.</div></div>
+        <div class="stat bl"><div class="stat-ic">&#129504;</div><div class="stat-v" id="st-se">0</div><div class="stat-l">Sessions</div></div>
+        <div class="stat rd"><div class="stat-ic">&#128293;</div><div class="stat-v" id="st-st">0j</div><div class="stat-l">Streak</div></div>
+      </div>
+      <div class="sec-ttl">Modules</div>
+      <div class="mod-grid">
+        <div class="mcard" style="--mc:var(--gold)"   onclick="goLearn('flashcard')"><div class="mc-ic">&#127183;</div><div class="mc-nm">Flashcards</div><div class="mc-ds">Repetition espacee (SR)</div></div>
+        <div class="mcard" style="--mc:var(--green)"  onclick="goLearn('qcm')"><div class="mc-ic">&#127919;</div><div class="mc-nm">QCM</div><div class="mc-ds">4 choix + explications</div></div>
+        <div class="mcard" style="--mc:var(--blue2)"  onclick="goLearn('vf')"><div class="mc-ic">&#9889;</div><div class="mc-nm">Vrai / Faux</div><div class="mc-ds">Valide les affirmations</div></div>
+        <div class="mcard" style="--mc:var(--red2)"   onclick="goLearn('fill')"><div class="mc-ic">&#9999;</div><div class="mc-nm">Completer</div><div class="mc-ds">Phrases a trous</div></div>
+        <div class="mcard" style="--mc:var(--gold)"   onclick="goLearn('match')"><div class="mc-ic">&#128279;</div><div class="mc-nm">Associations</div><div class="mc-ds">Termes et definitions</div></div>
+        <div class="mcard" style="--mc:var(--pk)"     onclick="goLearn('exam')"><div class="mc-ic">&#127891;</div><div class="mc-nm">Examen</div><div class="mc-ds">Chrono + 15 questions</div></div>
+        <div class="mcard" style="--mc:var(--green)"  onclick="goLearn('summary')"><div class="mc-ic">&#128221;</div><div class="mc-nm">Synthese</div><div class="mc-ds">Resume intelligent</div></div>
+        <div class="mcard" style="--mc:var(--blue2)"  onclick="goLearn('glossary')"><div class="mc-ic">&#128218;</div><div class="mc-nm">Glossaire</div><div class="mc-ds">Tous les termes cles</div></div>
+      </div>
+      <div class="sec-ttl">Dossiers recents</div>
+      <div id="dash-fl"></div>
+    </div>
+
+    <!-- MODULES -->
+    <div class="page" id="page-modules">
+      <div class="pg-title">Modules</div>
+      <div class="pg-sub">Choisissez votre mode d&#39;apprentissage</div>
+      <label class="flbl" style="margin-bottom:7px">Dossier source</label>
+      <select class="fsel" id="mfsel"></select>
+      <div class="ml" onclick="goLearnFrom('flashcard')"><div class="ml-ic">&#127183;</div><div><div class="ml-nm">Flashcards</div><div class="ml-ds">Repetition espacee &#8212; les cartes ratees reviennent plus souvent</div></div><div class="ml-ar">&#8250;</div></div>
+      <div class="ml" onclick="goLearnFrom('qcm')"><div class="ml-ic">&#127919;</div><div><div class="ml-nm">QCM</div><div class="ml-ds">8 questions a 4 choix avec explications detaillees</div></div><div class="ml-ar">&#8250;</div></div>
+      <div class="ml" onclick="goLearnFrom('vf')"><div class="ml-ic">&#9889;</div><div><div class="ml-nm">Vrai / Faux</div><div class="ml-ds">10 affirmations a valider rapidement</div></div><div class="ml-ar">&#8250;</div></div>
+      <div class="ml" onclick="goLearnFrom('fill')"><div class="ml-ic">&#9999;</div><div><div class="ml-nm">Completer les blancs</div><div class="ml-ds">Phrases a trous tirees de votre cours</div></div><div class="ml-ar">&#8250;</div></div>
+      <div class="ml" onclick="goLearnFrom('match')"><div class="ml-ic">&#128279;</div><div><div class="ml-nm">Associations</div><div class="ml-ds">Reliez chaque terme a sa definition</div></div><div class="ml-ar">&#8250;</div></div>
+      <div class="ml" onclick="goLearnFrom('exam')"><div class="ml-ic">&#127891;</div><div><div class="ml-nm">Mode Examen</div><div class="ml-ds">15 questions chrono &#8212; simulation de partiel</div></div><div class="ml-ar">&#8250;</div></div>
+      <div class="ml" onclick="goLearnFrom('summary')"><div class="ml-ic">&#128221;</div><div><div class="ml-nm">Synthese IA</div><div class="ml-ds">Resume structure genere par l&#39;IA</div></div><div class="ml-ar">&#8250;</div></div>
+      <div class="ml" onclick="goLearnFrom('glossary')"><div class="ml-ic">&#128218;</div><div><div class="ml-nm">Glossaire</div><div class="ml-ds">Tous les termes importants avec definitions</div></div><div class="ml-ar">&#8250;</div></div>
+    </div>
+
+    <!-- DOSSIERS -->
+    <div class="page" id="page-folders">
+      <div class="pg-title">Dossiers</div>
+      <div class="pg-sub">Organisez vos cours par matiere</div>
+      <input type="search" class="srch" placeholder="Rechercher..." oninput="filterF(this.value)">
+      <div id="flist"></div>
+      <div class="add-f" onclick="openFolderModal()">+ Nouveau dossier</div>
+    </div>
+
+    <!-- STATS -->
+    <div class="page" id="page-stats">
+      <div class="pg-title">Statistiques</div>
+      <div class="pg-sub">Chargement...</div>
+    </div>
+
+    <!-- POMODORO -->
+    <div class="page" id="page-pomodoro">
+      <div class="pg-title">Pomodoro</div>
+      <div class="pg-sub">Chargement...</div>
+    </div>
+
+    <!-- PROFIL -->
+    <div class="page" id="page-profile">
+      <div class="pg-title">Profil</div>
+      <div class="prof-hero">
+        <div class="prof-av">&#127891;</div>
+        <div class="prof-nm" id="p-nm">&#8212;</div>
+        <div class="prof-lv" id="p-lv">&#8212;</div>
+        <div class="prof-ai"><span class="chip chip-g" id="p-ai">&#8212;</span></div>
+      </div>
+      <button class="btn btn-gold btn-full" style="margin-bottom:14px;font-size:15px;padding:15px" onclick="clearAndReset()">
+        &#128273; Changer la cle API / fournisseur IA
+      </button>
+
+      <div class="srow" onclick="openAC('')"><div class="s-ic">&#128196;</div><div class="s-tx"><div class="s-lb">Ajouter un cours</div><div class="s-sb">Importer PDF, Word, PowerPoint, Excel ou coller du texte</div></div><div class="s-ar">&#8250;</div></div>
+      <div class="srow" onclick="showPage('modules')"><div class="s-ic">&#127918;</div><div class="s-tx"><div class="s-lb">Lancer un module</div><div class="s-sb">Choisir un mode d&#39;apprentissage</div></div><div class="s-ar">&#8250;</div></div>
+      <div class="srow" onclick="showPage('stats')"><div class="s-ic">&#128202;</div><div class="s-tx"><div class="s-lb">Statistiques detaillees</div><div class="s-sb">Graphique, badges, objectifs</div></div><div class="s-ar">&#8250;</div></div>
+      <div class="srow" onclick="exportData()"><div class="s-ic">&#128190;</div><div class="s-tx"><div class="s-lb">Exporter mes donnees</div><div class="s-sb">Sauvegarde locale de tous vos cours</div></div><div class="s-ar">&#8250;</div></div>
+      <div class="srow" onclick="clearAndReset()"><div class="s-ic">&#128260;</div><div class="s-tx"><div class="s-lb">Modifier le profil</div><div class="s-sb">Changer nom, niveau ou cle API</div></div><div class="s-ar">&#8250;</div></div>
+      <div style="text-align:center;margin-top:22px;padding-top:14px;border-top:1px solid var(--bdr)">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--gold2)">DuoCompta</div>
+        <div style="font-size:12px;color:var(--tx3);margin-top:4px">Developpe par <strong style="color:var(--tx2)">Gauthier Doumont</strong></div>
+        <div style="font-size:10px;color:var(--tx3);margin-top:2px;letter-spacing:.5px">TOUS DROITS RESERVES</div>
+      </div>
+    </div>
+
+  </div>
+  <nav class="bnav">
+    <div class="bni active" onclick="showPage('home',this)"><div class="bni-ic">&#127968;</div><div class="bni-lb">Accueil</div></div>
+    <div class="bni" onclick="showPage('modules',this)"><div class="bni-ic">&#127918;</div><div class="bni-lb">Modules</div></div>
+    <div class="bni" onclick="showPage('folders',this)"><div class="bni-ic">&#128193;</div><div class="bni-lb">Dossiers</div></div>
+    <div class="bni" onclick="showPage('stats',this);renderStats()"><div class="bni-ic">&#128202;</div><div class="bni-lb">Stats</div></div>
+    <div class="bni" onclick="showPage('profile',this);renderProfile()"><div class="bni-ic">&#128100;</div><div class="bni-lb">Profil</div></div>
+  </nav>
+</div>
+
+<!-- LEARNING ENGINE -->
+<div class="screen" id="s-learn">
+  <div class="ltop">
+    <button class="lback" onclick="exitLearn()">&#8592;</button>
+    <div class="l-nm" id="l-nm">&#8212;</div>
+    <div class="l-pw">
+      <div class="l-pt"><div class="l-pf" id="l-pf" style="width:0%"></div></div>
+      <div class="l-ct" id="l-ct">0/0</div>
+    </div>
+    <div class="l-badge" id="l-badge">00:00</div>
+  </div>
+  <div class="lcont" id="lcont">
+    <div class="gload">
+      <div class="gsp"></div>
+      <div class="g-t">Generation en cours</div>
+      <div class="g-s">Analyse de votre cours...</div>
+      <div class="g-dots"><div class="g-dot"></div><div class="g-dot"></div><div class="g-dot"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="mov" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="mbox"><div class="mhandle"></div><div id="mc"></div></div>
+</div>
+<div class="notif" id="notif"></div>
+<script>
+
+// ╔══════════════════════════════════════════════════╗
+// ║  MODULE 01 — CORE                                ║
+// ║  Storage, routing, auth, global state            ║
+// ╚══════════════════════════════════════════════════╝
+
+// ── Storage ──────────────────────────────────────────
+var DB = {
+  get: function(k) {
+    try { return JSON.parse(localStorage.getItem(k)); } catch(e) { return null; }
+  },
+  set: function(k, v) {
+    try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {}
+  },
+  del: function(k) {
+    try { localStorage.removeItem(k); } catch(e) {}
+  }
+};
+
+// ── Folder helpers ────────────────────────────────────
+function gF(uid)    { return DB.get("dc_f_" + uid) || []; }
+function sF(uid, f) { DB.set("dc_f_" + uid, f); }
+
+// ── Stats helpers ─────────────────────────────────────
+function gSt(uid) {
+  return DB.get("dc_st_" + uid) || {
+    sessions: 0,
+    scores: [],       // [{type, score, total, fid, date}]
+    streak: 0,
+    lastDay: null,
+    badges: [],
+    pomodoroTotal: 0,
+    goals: { dailyMin: 20 }
+  };
+}
+function sSt(uid, s) { DB.set("dc_st_" + uid, s); }
+
+// ── Spaced Repetition helpers ─────────────────────────
+function gSR(uid, fid) {
+  return DB.get("dc_sr_" + uid + "_" + fid) || {};
+  // { cardId: { interval, due, ease, reps } }
+}
+function sSR(uid, fid, data) { DB.set("dc_sr_" + uid + "_" + fid, data); }
+
+// ── Global state ──────────────────────────────────────
+var CU       = null;   // current user
+var lType    = "";     // active module type
+var lData    = [];     // active module data
+var lIdx     = 0;      // current question index
+var lScore   = 0;      // current session score
+var lMissed  = [];     // items answered wrong (for retry)
+var curFid   = "";     // current folder id
+var curFnm   = "";     // current folder name
+var selIco   = "\uD83D\uDCC1"; // selected icon in modal
+var _fillAns = "";     // temp answer for fill-in-blank
+var matchSel = null;   // {type, id} for match module
+var matchPairs   = [];
+var matchMatched = 0;
+
+// Pomodoro state
+var pomState = "idle"; // idle | work | break
+var pomInterval = null;
+var pomRemaining = 0;
+var pomWorkMin  = 25;
+var pomBreakMin = 5;
+
+// AI provider labels
+var AN = { groq: "Groq ⚡", claude: "Claude", openai: "ChatGPT", gemini: "Gemini" };
+
+// ── PWA install ───────────────────────────────────────
+var dP = null;
+window.addEventListener("beforeinstallprompt", function(e) {
+  e.preventDefault();
+  dP = e;
+  var banner = document.getElementById("ibanner");
+  if (banner) banner.classList.add("show");
+});
+function installPWA() {
+  if (!dP) return;
+  dP.prompt();
+  dP = null;
+  var banner = document.getElementById("ibanner");
+  if (banner) banner.classList.remove("show");
+}
+
+// ── Service Worker ────────────────────────────────────
+if (navigator.serviceWorker) {
+  navigator.serviceWorker.register("sw.js").catch(function() {});
+}
+
+// ── Screen / Page routing ─────────────────────────────
+function goScreen(n) {
+  var ss = document.querySelectorAll(".screen");
+  for (var i = 0; i < ss.length; i++) ss[i].classList.remove("active");
+  var el = document.getElementById("s-" + n);
+  if (el) el.classList.add("active");
+}
+
+function showPage(n, el) {
+  var pp = document.querySelectorAll("#s-app .page");
+  for (var i = 0; i < pp.length; i++) pp[i].classList.remove("active");
+  var pg = document.getElementById("page-" + n);
+  if (pg) pg.classList.add("active");
+  if (el) {
+    var bb = document.querySelectorAll(".bni");
+    for (var i = 0; i < bb.length; i++) bb[i].classList.remove("active");
+    el.classList.add("active");
+  }
+  if (n === "modules")  rfModSel();
+  if (n === "folders")  renderF();
+  if (n === "home")     renderDash();
+  if (n === "stats")    renderStats();
+  if (n === "profile")  renderProfile();
+}
+
+// ── Notification toast ────────────────────────────────
+function notify(msg, type) {
+  var n = document.getElementById("notif");
+  if (!n) return;
+  n.textContent = msg;
+  n.className = "notif show" +
+    (type === "ok"  ? " ok"  :
+     type === "err" || type === true ? " err" : "");
+  clearTimeout(n._t);
+  n._t = setTimeout(function() { n.className = "notif"; }, 3200);
+}
+
+// ── File utilities ────────────────────────────────────
+function getFileIcon(type) {
+  if (!type) return "\uD83D\uDCC4";
+  if (type.indexOf("pdf") !== -1)                                           return "\uD83D\uDCD5";
+  if (type.indexOf("word") !== -1 || type.indexOf("doc") !== -1)           return "\uD83D\uDCD8";
+  if (type.indexOf("presentation") !== -1 || type.indexOf("ppt") !== -1)   return "\uD83D\uDCD9";
+  if (type.indexOf("sheet") !== -1 || type.indexOf("xls") !== -1 || type.indexOf("csv") !== -1) return "\uD83D\uDCD7";
+  return "\uD83D\uDCC4";
+}
+function fmtSize(b) {
+  if (!b) return "";
+  if (b < 1024)    return b + " o";
+  if (b < 1048576) return Math.round(b / 1024) + " Ko";
+  return (b / 1048576).toFixed(1) + " Mo";
+}
+
+// ── Date utilities ────────────────────────────────────
+function dateKey(d) {
+  d = d || new Date();
+  return d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate();
+}
+
+// ── Init ──────────────────────────────────────────────
+function init() {
+  var saved = DB.get("dc_current");
+  if (saved && saved.name && saved.apiKey) {
+    CU = saved;
+    loadApp();
+    return;
+  }
+  goScreen("start");
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║  MODULE 02 — AUTH                                ║
+// ║  Onboarding, login, profile management           ║
+// ╚══════════════════════════════════════════════════╝
+
+function updHelp() {
+  var ai = document.getElementById("inp-ai").value;
+  var data = {
+    groq:   ["Cle API Groq",   "100% Gratuit : console.groq.com > API Keys > Create API Key", "gsk_..."],
+    claude: ["Cle API Claude", "Gratuit : console.anthropic.com > API Keys > Create Key",      "sk-ant-..."],
+    openai: ["Cle API OpenAI", "Gratuit : platform.openai.com > API Keys",                     "sk-..."],
+    gemini: ["Cle API Gemini", "Gratuit : aistudio.google.com > Get API Key",                  "AIza..."]
+  };
+  var d = data[ai] || data.groq;
+  document.getElementById("api-lbl").textContent  = d[0];
+  document.getElementById("api-hint").textContent = d[1];
+  document.getElementById("inp-key").placeholder  = d[2];
+}
+
+function doStart() {
+  var err    = document.getElementById("ob-err");
+  var name   = document.getElementById("inp-name").value.trim();
+  var level  = document.getElementById("inp-level").value.trim();
+  var ai     = document.getElementById("inp-ai").value;
+  var apiKey = document.getElementById("inp-key").value.trim();
+
+  if (!name) {
+    err.textContent = "Veuillez entrer votre prenom.";
+    err.style.display = "block"; return;
+  }
+  if (!apiKey) {
+    err.textContent = "La cle API est obligatoire pour activer l'IA.";
+    err.style.display = "block"; return;
+  }
+  err.style.display = "none";
+
+  var existing = DB.get("dc_current");
+  var uid = (existing && existing.name === name)
+    ? existing.id
+    : "u_" + name.toLowerCase().replace(/[^a-z0-9]/g, "_") + "_" + Date.now().toString(36);
+
+  CU = { id: uid, name: name, level: level, ai: ai, apiKey: apiKey };
+  DB.set("dc_current", CU);
+  loadApp();
+}
+
+function clearAndReset() {
+  if (CU) {
+    setTimeout(function() {
+      document.getElementById("inp-name").value  = CU.name;
+      document.getElementById("inp-level").value = CU.level  || "";
+      document.getElementById("inp-ai").value    = CU.ai;
+      document.getElementById("inp-key").value   = CU.apiKey;
+    }, 50);
+  }
+  DB.set("dc_current", null);
+  goScreen("start");
+}
+
+function loadApp() {
+  DB.set("dc_current", CU);
+  document.getElementById("tb-nm").textContent = CU.name;
+  document.getElementById("tb-ai").textContent = AN[CU.ai] || CU.ai;
+  var h = new Date().getHours();
+  var g = h < 12 ? "Bonjour" : h < 18 ? "Bon apres-midi" : "Bonsoir";
+  var gEl = document.getElementById("greeting");
+  if (gEl) gEl.innerHTML = g + ", <em>" + CU.name + "</em>";
+  updateStreak();
+  goScreen("app");
+  showPage("home", document.querySelector(".bni"));
+}
+
+function renderProfile() {
+  if (!CU) return;
+  var nm = document.getElementById("p-nm");
+  var lv = document.getElementById("p-lv");
+  var ai = document.getElementById("p-ai");
+  if (nm) nm.textContent = CU.name;
+  if (lv) lv.textContent = CU.level || "Non renseigne";
+  if (ai) ai.textContent = AN[CU.ai] || CU.ai;
+}
+
+function updateStreak() {
+  if (!CU) return;
+  var st    = gSt(CU.id);
+  var today = dateKey();
+  if (st.lastDay !== today) {
+    var yesterday = dateKey(new Date(Date.now() - 86400000));
+    if (st.lastDay === yesterday) {
+      st.streak = (st.streak || 0) + 1;
+    } else if (st.lastDay !== today) {
+      st.streak = 1;
+    }
+    st.lastDay = today;
+    sSt(CU.id, st);
+  }
+  checkBadges();
+}
+
+function exportData() {
+  var data = {
+    profile: { name: CU.name, level: CU.level, ai: CU.ai },
+    folders: gF(CU.id),
+    stats:   gSt(CU.id),
+    exportDate: new Date().toISOString()
+  };
+  var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  var a    = document.createElement("a");
+  a.href   = URL.createObjectURL(blob);
+  a.download = "duocompta-" + CU.name + "-" + dateKey() + ".json";
+  a.click();
+  notify("Export telecharge", "ok");
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║  MODULE 03 — FOLDERS                             ║
+// ║  Create, list, search folders and import files   ║
+// ╚══════════════════════════════════════════════════╝
+
+function renderDash() {
+  if (!CU) return;
+  var fs = gF(CU.id);
+  var st = gSt(CU.id);
+
+  document.getElementById("st-f").textContent  = fs.length;
+  document.getElementById("st-se").textContent = st.sessions || 0;
+  document.getElementById("st-st").textContent = (st.streak || 0) + "j";
+
+  var scores = (st.scores || []).map(function(s) { return s.pct !== undefined ? s.pct : s; });
+  document.getElementById("st-sc").textContent = scores.length
+    ? Math.round(scores.reduce(function(a, b) { return a + b; }, 0) / scores.length) + "%"
+    : "\u2014";
+
+  var dl = document.getElementById("dash-fl");
+  if (!dl) return;
+  if (!fs.length) {
+    dl.innerHTML = "<div class=\"empty-hint\">Aucun dossier \u2014 cr\u00e9ez-en un dans l'onglet Dossiers</div>";
+    return;
+  }
+  var h = "";
+  var items = fs.slice(0, 3);
+  for (var i = 0; i < items.length; i++) {
+    var f = items[i];
+    h += "<div class=\"fcard\" data-fid=\"" + f.id + "\" onclick=\"openFM(this.dataset.fid)\">";
+    h += "<div class=\"fcard-in\"><div class=\"ftop\">";
+    h += "<div class=\"f-ic\">" + f.icon + "</div>";
+    h += "<div><div class=\"f-nm\">" + esc(f.name) + "</div>";
+    h += "<div class=\"f-ds\">" + esc(f.description || "") + "</div></div></div>";
+    h += "<div class=\"fstats\"><div class=\"fstat\">" + (f.files || []).length + " fichier(s)</div></div>";
+    h += "</div></div>";
+  }
+  dl.innerHTML = h;
+}
+
+function renderF(q) {
+  q = q || "";
+  var fs   = gF(CU.id);
+  var list = document.getElementById("flist");
+  if (!list) return;
+  var ff = q
+    ? fs.filter(function(f) { return f.name.toLowerCase().indexOf(q.toLowerCase()) !== -1; })
+    : fs;
+
+  if (!ff.length) {
+    list.innerHTML = "<div class=\"empty-hint\">Aucun dossier.</div>";
+    return;
+  }
+  var h = "";
+  for (var i = 0; i < ff.length; i++) {
+    var f    = ff[i];
+    var files = f.files || [];
+    h += "<div class=\"fcard\">";
+    h += "<div class=\"fcard-in\">";
+    h += "<div class=\"ftop\">";
+    h += "<div class=\"f-ic\">" + f.icon + "</div>";
+    h += "<div style=\"flex:1\"><div class=\"f-nm\">" + esc(f.name) + "</div>";
+    h += "<div class=\"f-ds\">" + esc(f.description || "") + "</div></div>";
+    h += "<button class=\"icon-btn\" data-fid=\"" + f.id + "\" onclick=\"delFolder(this.dataset.fid)\" title=\"Supprimer\">&#128465;</button>";
+    h += "</div>";
+    if (files.length) {
+      h += "<div class=\"file-list\">";
+      for (var j = 0; j < files.length; j++) {
+        var fi = files[j];
+        h += "<div class=\"file-item\">";
+        h += "<div class=\"file-ic\">" + getFileIcon(fi.type) + "</div>";
+        h += "<div style=\"flex:1\"><div class=\"file-nm\">" + esc(fi.name) + "</div>";
+        h += "<div class=\"file-meta\">" + fmtSize(fi.size) + "</div></div>";
+        h += "<div class=\"file-del\" data-fid=\"" + f.id + "\" data-cid=\"" + fi.id + "\" onclick=\"delFile(this.dataset.fid,this.dataset.cid)\">&#128465;</div>";
+        h += "</div>";
+      }
+      h += "</div>";
+    }
+    h += "<div class=\"f-actions\">";
+    h += "<button class=\"f-btn\" data-fid=\"" + f.id + "\" onclick=\"openAC(this.dataset.fid)\">+ Cours</button>";
+    h += "<button class=\"f-btn\" data-fid=\"" + f.id + "\" onclick=\"openFM(this.dataset.fid)\">\u25b6 Reviser</button>";
+    h += "</div>";
+    h += "</div></div>";
+  }
+  list.innerHTML = h;
+}
+
+function filterF(q) { renderF(q); }
+
+function delFolder(fid) {
+  if (!confirm("Supprimer ce dossier et tous ses cours ?")) return;
+  var fs = gF(CU.id).filter(function(f) { return f.id !== fid; });
+  sF(CU.id, fs);
+  renderF(); renderDash(); rfModSel();
+  notify("Dossier supprime", "ok");
+}
+
+function delFile(fid, cid) {
+  var fs = gF(CU.id);
+  for (var i = 0; i < fs.length; i++) {
+    if (fs[i].id === fid) {
+      fs[i].files = (fs[i].files || []).filter(function(x) { return x.id !== cid; });
+      break;
+    }
+  }
+  sF(CU.id, fs);
+  renderF(); notify("Fichier supprime", "ok");
+}
+
+function rfModSel() {
+  var fs  = gF(CU.id);
+  var sel = document.getElementById("mfsel");
+  if (!sel) return;
+  if (!fs.length) {
+    sel.innerHTML = "<option>Creez d'abord un dossier avec des cours</option>";
+    return;
+  }
+  var h = "";
+  for (var i = 0; i < fs.length; i++) {
+    h += "<option value=\"" + fs[i].id + "\">" + fs[i].icon + " " + esc(fs[i].name) +
+         " (" + (fs[i].files || []).length + " fichier(s))</option>";
+  }
+  sel.innerHTML = h;
+}
+
+function openFM(fid) {
+  rfModSel();
+  var sel = document.getElementById("mfsel");
+  if (sel) sel.value = fid;
+  var bnis = document.querySelectorAll(".bni");
+  showPage("modules", bnis[1] || null);
+  for (var i = 0; i < bnis.length; i++) bnis[i].classList.remove("active");
+  if (bnis[1]) bnis[1].classList.add("active");
+}
+
+function getCtx(fid) {
+  var fs = gF(CU.id), f = null;
+  for (var i = 0; i < fs.length; i++) { if (fs[i].id === fid) { f = fs[i]; break; } }
+  if (!f || !f.files || !f.files.length) return "";
+  var ctx = "";
+  for (var i = 0; i < f.files.length; i++) {
+    ctx += "\n\n=== " + f.files[i].name + " ===\n" + (f.files[i].content || "");
+  }
+  return ctx; // pas de limite — splitCtx gere le decoupage
+}
+
+// ── Decoupage intelligent en chunks ──────────────────
+var CHUNK_SIZE = 13000;
+function splitCtx(ctx) {
+  if (ctx.length <= CHUNK_SIZE) return [ctx];
+  var chunks = [], remaining = ctx;
+  while (remaining.length > 0) {
+    if (remaining.length <= CHUNK_SIZE) { chunks.push(remaining); break; }
+    var zone   = remaining.slice(CHUNK_SIZE - 500, CHUNK_SIZE + 500);
+    var cutIdx = zone.lastIndexOf("\n\n");
+    if (cutIdx === -1) cutIdx = zone.lastIndexOf("\n");
+    if (cutIdx === -1) cutIdx = 500;
+    var cut = CHUNK_SIZE - 500 + cutIdx;
+    chunks.push(remaining.slice(0, cut));
+    remaining = remaining.slice(cut).trim();
+  }
+  return chunks;
+}
+
+// ── HTML escaping (prevents XSS in folder/file names) ──
+function esc(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// ── Modal: new folder ──────────────────────────────────
+function openFolderModal() {
+  selIco = "\uD83D\uDCC1";
+  var icons = ["\uD83D\uDCCA","\uD83D\uDCC8","\uD83D\uDCC9","\uD83C\uDFE6","\uD83D\uDCB0",
+               "\uD83D\uDCCB","\uD83D\uDD2C","\u2696\uFE0F","\uD83D\uDCDA","\uD83D\uDCBC",
+               "\uD83C\uDF93","\uD83D\uDCCC","\uD83D\uDCC1","\uD83D\uDCF0","\uD83D\uDCA1"];
+  var ic = "";
+  for (var i = 0; i < icons.length; i++) {
+    ic += "<span class=\"ico\" data-ico=\"" + icons[i] + "\" onclick=\"pickIco(this)\">" + icons[i] + "</span>";
+  }
+  var mc = document.getElementById("mc");
+  mc.innerHTML =
+    "<div class=\"m-t\">\uD83D\uDCC1 Nouveau dossier</div>" +
+    "<div class=\"m-s\">Organisez vos cours par matiere.</div>" +
+    "<label class=\"m-lb\">Nom du dossier</label>" +
+    "<input class=\"m-in\" id=\"m-name\" placeholder=\"ex : Comptabilite generale\">" +
+    "<label class=\"m-lb\">Description</label>" +
+    "<input class=\"m-in\" id=\"m-desc\" placeholder=\"ex : Bilan, compte de resultat...\">" +
+    "<label class=\"m-lb\">Icone</label>" +
+    "<div class=\"ic-row\">" + ic + "</div>" +
+    "<button class=\"btn btn-gold btn-full\" onclick=\"subFolder()\">Creer &#8594;</button>";
+  openModal();
+}
+
+function subFolder() {
+  var name = document.getElementById("m-name").value.trim();
+  var desc = document.getElementById("m-desc").value.trim();
+  if (!name) { notify("Donnez un nom au dossier", true); return; }
+  var fs = gF(CU.id);
+  fs.push({
+    id: "f_" + Date.now(),
+    name: name, icon: selIco, description: desc,
+    files: [], createdAt: new Date().toISOString()
+  });
+  sF(CU.id, fs);
+  closeModal(); renderF(); renderDash(); rfModSel();
+  notify("\"" + name + "\" cree", "ok");
+}
+
+// ── Modal: add course ─────────────────────────────────
+function openAC(fid) {
+  var fs = gF(CU.id);
+  var fOpts = "";
+  for (var i = 0; i < fs.length; i++) {
+    fOpts += "<option value=\"" + fs[i].id + "\"" + (fs[i].id === fid ? " selected" : "") + ">" +
+             fs[i].icon + " " + esc(fs[i].name) + "</option>";
+  }
+  var mc = document.getElementById("mc");
+  mc.innerHTML =
+    "<div class=\"m-t\">\uD83D\uDCC4 Ajouter un cours</div>" +
+    "<div class=\"m-s\">Importez un fichier ou collez le texte.</div>" +
+    "<label class=\"m-lb\">Dossier</label>" +
+    "<select class=\"m-in\" id=\"m-fol\">" + fOpts + "</select>" +
+    "<label class=\"m-lb\">Nom du cours</label>" +
+    "<input class=\"m-in\" id=\"m-cnm\" placeholder=\"ex : Chapitre 3 - Le bilan\">" +
+    "<label class=\"m-lb\">Importer un fichier</label>" +
+    "<div class=\"upload-zone\" id=\"uz\">" +
+      "<input type=\"file\" id=\"fi\" accept=\".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.csv\" onchange=\"handleFile(this)\">" +
+      "<div class=\"uz-ic\">\uD83D\uDCC4</div>" +
+      "<div class=\"uz-txt\">Glissez un fichier ou cliquez</div>" +
+      "<div class=\"uz-sub\">Texte extrait automatiquement</div>" +
+      "<div class=\"uz-formats\">" +
+        "<span class=\"uz-fmt\">.PDF</span>" +
+        "<span class=\"uz-fmt\">.DOCX</span>" +
+        "<span class=\"uz-fmt\">.PPTX</span>" +
+        "<span class=\"uz-fmt\">.XLSX</span>" +
+        "<span class=\"uz-fmt\">.TXT</span>" +
+        "<span class=\"uz-fmt\">.CSV</span>" +
+      "</div>" +
+    "</div>" +
+    "<div id=\"fprog\" style=\"display:none\">" +
+      "<div style=\"font-size:13px;color:var(--tx2);margin-bottom:6px\" id=\"fstat\">Lecture...</div>" +
+      "<div class=\"prog-bar\"><div class=\"prog-fill\" id=\"pfill\" style=\"width:30%\"></div></div>" +
+    "</div>" +
+    "<label class=\"m-lb\">Ou collez votre texte</label>" +
+    "<textarea class=\"m-in\" id=\"m-ctxt\" rows=\"7\" " +
+      "placeholder=\"Collez ici le texte complet de votre cours...\" " +
+      "style=\"resize:vertical;min-height:140px;font-size:13px;line-height:1.6\"></textarea>" +
+    "<button class=\"btn btn-gold btn-full\" onclick=\"subCourse()\">Ajouter au dossier &#8594;</button>";
+  openModal();
+}
+
+function handleFile(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var prog = document.getElementById("fprog");
+  var stat = document.getElementById("fstat");
+  var fill = document.getElementById("pfill");
+  if (prog) prog.style.display = "block";
+  if (stat) stat.textContent   = "Lecture de \"" + file.name + "\"...";
+  if (fill) fill.style.width   = "40%";
+  var nameInp = document.getElementById("m-cnm");
+  if (nameInp && !nameInp.value) nameInp.value = file.name.replace(/\.[^.]+$/, "");
+  readFile(file, function(text) {
+    if (fill) fill.style.width = "100%";
+    if (stat) stat.textContent = "\u2713 " + text.length + " caracteres extraits";
+    var ta = document.getElementById("m-ctxt");
+    if (ta) ta.value = text;
+  });
+}
+
+function subCourse() {
+  var fid  = document.getElementById("m-fol")  ? document.getElementById("m-fol").value.trim()  : "";
+  var name = document.getElementById("m-cnm")  ? document.getElementById("m-cnm").value.trim()  : "";
+  var txt  = document.getElementById("m-ctxt") ? document.getElementById("m-ctxt").value.trim() : "";
+  if (!fid)  { notify("Selectionnez un dossier", true); return; }
+  if (!name) { notify("Donnez un nom au cours",  true); return; }
+  if (!txt)  { notify("Ajoutez du contenu",      true); return; }
+  var fs = gF(CU.id), f = null;
+  for (var i = 0; i < fs.length; i++) { if (fs[i].id === fid) { f = fs[i]; break; } }
+  if (!f) return;
+  f.files = f.files || [];
+  var fi    = document.getElementById("fi");
+  var ftype = fi && fi.files[0] ? fi.files[0].type : "text/plain";
+  var fsize = fi && fi.files[0] ? fi.files[0].size : txt.length;
+  f.files.push({
+    id: "c_" + Date.now(),
+    name: name,
+    content: txt.slice(0, 18000),
+    type: ftype, size: fsize,
+    addedAt: new Date().toISOString()
+  });
+  sF(CU.id, fs);
+  closeModal(); renderF(); renderDash();
+  notify("\"" + name + "\" ajoute", "ok");
+}
+
+function pickIco(el) {
+  document.querySelectorAll(".ico").forEach(function(e) { e.classList.remove("sel"); });
+  el.classList.add("sel");
+  selIco = el.dataset.ico;
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║  MODULE 04 — AI ENGINE                           ║
+// ║  Auto-detection du meilleur modele disponible    ║
+// ╚══════════════════════════════════════════════════╝
+
+var _modelCache = {};
+
+var MODEL_PREFS = {
+  groq:   ["llama-3.3-70b-versatile","llama-3.1-70b-versatile","llama3-70b-8192","mixtral-8x7b-32768","llama3-8b-8192"],
+  claude: ["claude-opus-4-5","claude-sonnet-4-5","claude-3-7-sonnet-20250219","claude-3-5-sonnet-20241022","claude-3-5-haiku-20241022","claude-3-opus-20240229","claude-3-haiku-20240307"],
+  openai: ["gpt-4o","gpt-4o-mini","gpt-4-turbo","gpt-4","gpt-3.5-turbo"],
+  gemini: ["gemini-2.0-flash","gemini-2.0-flash-lite","gemini-1.5-flash","gemini-1.5-pro","gemini-pro"]
+};
+
+function callAI(prompt, cb) {
+  var ai = CU.ai;
+  if (_modelCache[ai]) { _doCallAI(prompt, _modelCache[ai], cb); return; }
+  detectBestModel(ai, CU.apiKey, function(model) {
+    _modelCache[ai] = model;
+    _doCallAI(prompt, model, cb);
+  });
+}
+
+function detectBestModel(ai, apiKey, done) {
+  if (ai === "groq") {
+    fetch("https://api.groq.com/openai/v1/models", { headers: { "Authorization": "Bearer " + apiKey } })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var av = (d.data || []).map(function(m) { return m.id; });
+      var pr = MODEL_PREFS.groq;
+      for (var i = 0; i < pr.length; i++) if (av.indexOf(pr[i]) !== -1) { done(pr[i]); return; }
+      done(av.find(function(m) { return m.indexOf("llama") !== -1; }) || pr[0]);
+    }).catch(function() { done(MODEL_PREFS.groq[0]); });
+
+  } else if (ai === "claude") {
+    fetch("https://api.anthropic.com/v1/models", {
+      headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var av = (d.data || []).map(function(m) { return m.id; });
+      var pr = MODEL_PREFS.claude;
+      for (var i = 0; i < pr.length; i++) if (av.indexOf(pr[i]) !== -1) { done(pr[i]); return; }
+      done(av.find(function(m) { return m.indexOf("sonnet") !== -1; }) || pr[pr.length-1]);
+    }).catch(function() { done(MODEL_PREFS.claude[1]); });
+
+  } else if (ai === "openai") {
+    fetch("https://api.openai.com/v1/models", { headers: { "Authorization": "Bearer " + apiKey } })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var av = (d.data || []).map(function(m) { return m.id; });
+      var pr = MODEL_PREFS.openai;
+      for (var i = 0; i < pr.length; i++) if (av.indexOf(pr[i]) !== -1) { done(pr[i]); return; }
+      done(pr[0]);
+    }).catch(function() { done(MODEL_PREFS.openai[0]); });
+
+  } else {
+    // Gemini
+    fetch("https://generativelanguage.googleapis.com/v1beta/models?key=" + apiKey)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var av = (d.models || [])
+        .filter(function(m) { return m.supportedGenerationMethods && m.supportedGenerationMethods.indexOf("generateContent") !== -1; })
+        .map(function(m) { return m.name.replace("models/", ""); });
+      var pr = MODEL_PREFS.gemini;
+      for (var i = 0; i < pr.length; i++) if (av.indexOf(pr[i]) !== -1) { done(pr[i]); return; }
+      done(av.find(function(m) { return m.indexOf("flash") !== -1; }) || pr[0]);
+    }).catch(function() { done(MODEL_PREFS.gemini[0]); });
+  }
+}
+
+function _doCallAI(prompt, model, cb) {
+  var ai = CU.ai;
+  var url, headers = { "Content-Type": "application/json" }, body;
+
+  if (ai === "groq") {
+    url = "https://api.groq.com/openai/v1/chat/completions";
+    headers["Authorization"] = "Bearer " + CU.apiKey;
+    body = JSON.stringify({
+      model: model, max_tokens: 3000,
+      messages: [
+        { role: "system", content: "Tu es un assistant pedagogique expert. Reponds toujours en francais." },
+        { role: "user",   content: prompt }
+      ]
+    });
+  } else if (ai === "claude") {
+    url = "https://api.anthropic.com/v1/messages";
+    headers["x-api-key"]         = CU.apiKey;
+    headers["anthropic-version"] = "2023-06-01";
+    body = JSON.stringify({ model: model, max_tokens: 3000, messages: [{ role: "user", content: prompt }] });
+  } else if (ai === "openai") {
+    url = "https://api.openai.com/v1/chat/completions";
+    headers["Authorization"] = "Bearer " + CU.apiKey;
+    body = JSON.stringify({
+      model: model, max_tokens: 3000,
+      messages: [
+        { role: "system", content: "Tu es un assistant pedagogique expert. Reponds toujours en francais." },
+        { role: "user",   content: prompt }
+      ]
+    });
+  } else {
+    url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + CU.apiKey;
+    body = JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+  }
+
+  fetch(url, { method: "POST", headers: headers, body: body })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (ai === "groq" || ai === "openai") {
+      if (d.error) cb(null, d.error.message);
+      else         cb(d.choices[0].message.content, null);
+    } else if (ai === "claude") {
+      if (d.error) {
+        if (d.error.message && d.error.message.indexOf("not found") !== -1) delete _modelCache[ai];
+        cb(null, d.error.message);
+      } else {
+        cb(d.content[0].text, null);
+      }
+    } else {
+      if (d.error) {
+        if (d.error.message && (d.error.message.indexOf("not found") !== -1 || d.error.message.indexOf("not supported") !== -1)) delete _modelCache[ai];
+        cb(null, d.error.message);
+      } else {
+        cb(d.candidates[0].content.parts[0].text, null);
+      }
+    }
+  }).catch(function(e) { cb(null, e.message); });
+}
+
+// ── Prompts orientes examen ───────────────────────────
+function getPrompt(type, ctx) {
+  var base =
+    "Tu es un professeur expert qui prepare ses etudiants aux examens. " +
+    "Analyse le cours suivant et identifie UNIQUEMENT les notions, definitions, formules et concepts " +
+    "susceptibles d'etre poses lors d'un examen ou interrogation. " +
+    "Ignore les exemples anecdotiques et les details non evaluables. " +
+    "Concentre-toi sur : definitions cles, theoremes, regles, formules, distinctions importantes, pieges classiques. " +
+    "Reponds UNIQUEMENT avec le JSON demande, sans texte avant ni apres, sans balises markdown.\n\n" +
+    "CONTENU DU COURS:\n" + ctx + "\n\n";
+
+  if (type === "flashcard")
+    return base +
+      "Cree exactement 10 flashcards sur les notions les plus importantes pour l'examen. " +
+      "Privilegie les definitions, distinctions cles et regles fondamentales. " +
+      "Format JSON: [{\"front\":\"question directe comme en examen\",\"back\":\"reponse precise et complete (2-3 phrases)\"}]";
+
+  if (type === "qcm")
+    return base +
+      "Cree exactement 8 questions QCM du type de celles posees en examen. " +
+      "Inclus des pieges classiques et distinctions subtiles que les etudiants confondent souvent. " +
+      "Format JSON: [{\"q\":\"question\",\"opts\":[\"A\",\"B\",\"C\",\"D\"],\"correct\":0,\"exp\":\"explication pourquoi c est la bonne reponse\"}] " +
+      "(correct = index 0 a 3 de la bonne reponse)";
+
+  if (type === "vf")
+    return base +
+      "Cree exactement 10 affirmations Vrai/Faux sur les points qui font souvent l'objet d'erreurs en examen. " +
+      "Inclus des affirmations partiellement vraies comme en examen reel. " +
+      "Format JSON: [{\"statement\":\"affirmation\",\"answer\":true,\"exp\":\"explication precise\"}]";
+
+  if (type === "fill")
+    return base +
+      "Cree 8 phrases a trous centrees sur les termes techniques et definitions cles. " +
+      "Le trou _____ doit remplacer un mot indispensable a connaitre pour l'examen. " +
+      "Format JSON: [{\"sentence\":\"phrase avec _____ a la place du terme cle\",\"answer\":\"le terme exact\",\"hint\":\"indice pour guider\"}]";
+
+  if (type === "match")
+    return base +
+      "Cree exactement 6 paires terme/definition en choisissant les 6 notions les plus importantes. " +
+      "Format JSON: [{\"term\":\"terme technique\",\"definition\":\"definition precise et complete\"}]";
+
+  if (type === "exam")
+    return base +
+      "Cree un examen realiste de 15 questions comme un vrai partiel : " +
+      "5 QCM (avec pieges), 5 vrai/faux, 5 phrases a trous (termes techniques). " +
+      "Format JSON: [" +
+        "{\"type\":\"qcm\",\"q\":\"question\",\"opts\":[\"A\",\"B\",\"C\",\"D\"],\"correct\":0,\"exp\":\"explication\"}," +
+        "{\"type\":\"vf\",\"statement\":\"affirmation\",\"answer\":true,\"exp\":\"explication\"}," +
+        "{\"type\":\"fill\",\"sentence\":\"phrase avec _____\",\"answer\":\"mot\",\"hint\":\"indice\"}" +
+      "] (15 items au total)";
+
+  if (type === "glossary")
+    return base +
+      "Extrais tous les termes techniques que l'etudiant DOIT connaitre pour l'examen. " +
+      "Format JSON: [{\"term\":\"terme\",\"definition\":\"definition rigoureuse en 1-2 phrases\"}] " +
+      "(entre 10 et 20 termes, du plus important au moins important)";
+
+  if (type === "summary")
+    return "Tu es un professeur expert qui prepare ses etudiants aux examens. " +
+      "Cree une fiche de revision structuree en markdown, " +
+      "en te concentrant UNIQUEMENT sur ce qui peut etre evalue en examen. " +
+      "Utilise # pour le titre, ## pour les sections, ### pour les sous-sections, " +
+      "**gras** pour les termes et regles indispensables, et des listes a puces. " +
+      "Structure: Notions fondamentales > Regles et formules > Distinctions importantes > Pieges a eviter > Ce qui tombe souvent a l'examen.\n\n" +
+      "CONTENU:\n" + ctx;
+}
+
+// ── File text extraction ──────────────────────────────
+function readFile(file, callback) {
+  var reader = new FileReader();
+  var ext    = (file.name || "").split(".").pop().toLowerCase();
+  var type   = file.type || "";
+
+  if (type.indexOf("text") !== -1 || ext === "txt" || ext === "md" || ext === "csv") {
+    reader.onload = function(e) { callback(e.target.result); };
+    reader.readAsText(file, "UTF-8");
+    return;
+  }
+  reader.onload = function(e) {
+    if (ext === "pdf" || type.indexOf("pdf") !== -1) {
+      extractPDF(e.target.result, callback);
+    } else if (
+      ext === "docx" || ext === "pptx" || ext === "xlsx" ||
+      type.indexOf("officedocument") !== -1 || type.indexOf("msword") !== -1
+    ) {
+      extractOffice(e.target.result, ext, callback);
+    } else {
+      callback("[Fichier non lisible - copiez le texte manuellement]");
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function extractPDF(buf, cb) {
+  var lib = window["pdfjs-dist/build/pdf"];
+  if (!lib || !lib.getDocument) { extractPDFFallback(buf, cb); return; }
+  lib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  lib.getDocument({ data: new Uint8Array(buf) }).promise.then(function(pdf) {
+    var total = pdf.numPages, allText = "", done = 0;
+    for (var p = 1; p <= total; p++) {
+      (function(pn) {
+        pdf.getPage(pn).then(function(page) {
+          page.getTextContent().then(function(tc) {
+            allText += "\n--- Page " + pn + " ---\n" + tc.items.map(function(i) { return i.str; }).join(" ");
+            done++;
+            if (done === total) {
+              var r = allText.trim();
+              if (r.length < 50) extractPDFFallback(buf, cb);
+              else cb(r); // pas de limite — splitCtx gere le decoupage
+            }
+          }).catch(function() { done++; if (done === total) cb(allText.trim() || "[PDF vide]"); });
+        }).catch(function() { done++; if (done === total) cb(allText.trim() || "[PDF vide]"); });
+      })(p);
+    }
+  }).catch(function() { extractPDFFallback(buf, cb); });
+}
+
+function extractPDFFallback(buf, cb) {
+  try {
+    var bytes = new Uint8Array(buf), str = "";
+    for (var i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]);
+    var text = "", blocks = str.match(/BT[\s\S]*?ET/g) || [];
+    for (var i = 0; i < blocks.length; i++) {
+      var txts = blocks[i].match(/\(([^)]*)\)\s*T[jJ]/g) || [];
+      for (var j = 0; j < txts.length; j++)
+        text += txts[j].replace(/^\(/, "").replace(/\)\s*T[jJ]$/, "") + " ";
+      text += "\n";
+    }
+    if (text.trim().length < 50)
+      text = str.replace(/[^\x20-\x7E\n]/g, " ").split(/\s+/).filter(function(w) { return w.length > 3; }).join(" ");
+    cb(text.trim() || "[PDF : texte non extractible - copiez le texte manuellement]");
+  } catch(e) { cb("[PDF : erreur - copiez le texte manuellement]"); }
+}
+
+function extractOffice(buf, ext, cb) {
+  try {
+    var bytes = new Uint8Array(buf), str = "";
+    var limit = Math.min(bytes.length, 1000000);
+    for (var i = 0; i < limit; i++) str += String.fromCharCode(bytes[i]);
+    var text = "";
+    var rx = [/<w:t[^>]*>([^<]+)<\/w:t>/g, /<a:t[^>]*>([^<]+)<\/a:t>/g, /<t[^>]*>([^<]*)<\/t>/g];
+    for (var r = 0; r < rx.length; r++) {
+      var m;
+      while ((m = rx[r].exec(str)) !== null) { var t = m[1].trim(); if (t) text += t + " "; }
+    }
+    if (text.trim().length < 20 && ext === "xlsx") {
+      var cm = str.match(/<v>([^<]+)<\/v>/g) || [];
+      for (var i = 0; i < cm.length; i++) text += cm[i].replace(/<[^>]+>/g, "") + " ";
+    }
+    cb(text.trim().length > 30
+      ? text.trim()
+      : "[" + ext.toUpperCase() + " : texte non extractible - copiez le texte manuellement]");
+  } catch(e) { cb("[" + ext.toUpperCase() + " : erreur - copiez le texte manuellement]"); }
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║  MODULE 05 — LEARNING ENGINE                     ║
+// ║  Launch, chunking auto, flashcards SR, results   ║
+// ╚══════════════════════════════════════════════════╝
+
+var MNAMES  = { flashcard:"Flashcards", qcm:"QCM", vf:"Vrai / Faux",
+                fill:"Completer", match:"Associations", summary:"Synthese",
+                exam:"Mode Examen", glossary:"Glossaire" };
+var MCOLORS = { flashcard:"var(--gold)", qcm:"var(--green)", vf:"var(--blue2)",
+                fill:"var(--red2)", match:"var(--gold)", summary:"var(--green)",
+                exam:"var(--pk)", glossary:"var(--tx2)" };
+
+function goLearn(type) {
+  var fs = gF(CU.id);
+  if (!fs.length) { notify("Creez d'abord un dossier avec des cours", true); return; }
+  if (fs.length === 1) { launchLearn(type, fs[0].id); return; }
+  openPickFolder(type);
+}
+
+function goLearnFrom(type) {
+  var fid = document.getElementById("mfsel") ? document.getElementById("mfsel").value : "";
+  if (!fid || fid.indexOf("Creez") !== -1) {
+    notify("Selectionnez un dossier avec des cours", true); return;
+  }
+  launchLearn(type, fid);
+}
+
+function openPickFolder(type) {
+  var fs = gF(CU.id);
+  if (!fs.length) { notify("Creez un dossier avec des cours", true); return; }
+  var rows = "";
+  for (var i = 0; i < fs.length; i++) {
+    rows += "<div class=\"srow\" data-type=\"" + type + "\" data-fid=\"" + fs[i].id + "\"" +
+            " onclick=\"closeModal();launchLearn(this.dataset.type,this.dataset.fid)\">" +
+            "<div class=\"s-ic\">" + fs[i].icon + "</div>" +
+            "<div class=\"s-tx\"><div class=\"s-lb\">" + esc(fs[i].name) + "</div>" +
+            "<div class=\"s-sb\">" + (fs[i].files||[]).length + " fichier(s)</div></div>" +
+            "<div class=\"s-ar\">&#8250;</div></div>";
+  }
+  var mc = document.getElementById("mc");
+  mc.innerHTML =
+    "<div class=\"m-t\">Choisir un dossier</div>" +
+    "<div class=\"m-s\">Quel dossier utiliser pour ce module ?</div>" +
+    rows;
+  openModal();
+}
+
+function launchLearn(type, fid) {
+  var fs = gF(CU.id), f = null;
+  for (var i = 0; i < fs.length; i++) { if (fs[i].id === fid) { f = fs[i]; break; } }
+  if (!f) { notify("Dossier introuvable", true); return; }
+  if (!f.files || !f.files.length) { notify("Ajoutez des cours dans ce dossier", true); return; }
+
+  lType = type; curFid = fid; curFnm = f.name; lIdx = 0; lScore = 0; lMissed = [];
+
+  document.getElementById("l-nm").textContent = MNAMES[type] || type;
+  document.getElementById("l-pf").style.background =
+    "linear-gradient(90deg," + MCOLORS[type] + "," + MCOLORS[type] + "88)";
+
+  var badge = document.getElementById("l-badge");
+  if (badge) badge.style.display = (type === "exam") ? "flex" : "none";
+
+  document.getElementById("lcont").innerHTML = loadingHTML("Analyse de \"" + esc(f.name) + "\"...");
+  goScreen("learn");
+
+  var st = gSt(CU.id);
+  st.sessions = (st.sessions || 0) + 1;
+  sSt(CU.id, st);
+  updateStreak();
+
+  genModule(type, getCtx(fid), f.name);
+}
+
+function loadingHTML(msg) {
+  return "<div class=\"gload\">" +
+         "<div class=\"gsp\"></div>" +
+         "<div class=\"g-t\">Generation en cours</div>" +
+         "<div class=\"g-s\">" + msg + "</div>" +
+         "<div class=\"g-dots\"><div class=\"g-dot\"></div><div class=\"g-dot\"></div><div class=\"g-dot\"></div></div>" +
+         "</div>";
+}
+
+// ── Generate module — decoupage automatique ───────────
+function genModule(type, ctx, fname) {
+  if (!ctx) {
+    document.getElementById("lcont").innerHTML =
+      "<div class=\"gload\"><div style=\"font-size:44px\">\uD83D\uDCC1</div>" +
+      "<div class=\"g-t\">Dossier vide</div>" +
+      "<div class=\"g-s\">Ajoutez des cours dans ce dossier</div>" +
+      "<button class=\"btn btn-ghost\" style=\"margin-top:20px\" onclick=\"exitLearn()\">&#8592; Retour</button></div>";
+    return;
+  }
+  var chunks = splitCtx(ctx);
+  if (chunks.length === 1) { genModuleSingle(type, chunks[0], fname); return; }
+
+  // Syllabus long detecte
+  document.getElementById("lcont").innerHTML = loadingHTML(
+    "Syllabus long \u2014 " + chunks.length + " parties \u00e0 analyser"
+  );
+  if (type === "summary" || type === "glossary") {
+    genModuleChunked(type, chunks, fname, 0, []);
+  } else {
+    genModuleChunkedJSON(type, chunks, fname, 0, []);
+  }
+}
+
+// ── Chunk par chunk pour modules JSON ────────────────
+function genModuleChunkedJSON(type, chunks, fname, idx, accumulated) {
+  var lc = document.getElementById("lcont");
+  if (!lc) return;
+  lc.innerHTML = loadingHTML("Partie " + (idx+1) + "/" + chunks.length + " \u2014 " + esc(fname));
+  document.getElementById("l-pf").style.width = Math.round(idx / chunks.length * 100) + "%";
+  document.getElementById("l-ct").textContent = "Analyse " + (idx+1) + "/" + chunks.length;
+
+  callAI(getPrompt(type, chunks[idx]), function(text, err) {
+    if (!err && text) {
+      try {
+        var clean = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        var items = JSON.parse(clean);
+        if (Array.isArray(items)) accumulated = accumulated.concat(items);
+      } catch(e) {}
+    }
+    if (idx + 1 < chunks.length) {
+      genModuleChunkedJSON(type, chunks, fname, idx + 1, accumulated);
+    } else {
+      var maxItems = { flashcard:20, qcm:16, vf:20, fill:16, match:12, exam:15 };
+      var max = maxItems[type] || 20;
+      // Melanger pour avoir de la variete de tous les chunks
+      for (var i = accumulated.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = accumulated[i]; accumulated[i] = accumulated[j]; accumulated[j] = tmp;
+      }
+      lData = accumulated.slice(0, max);
+      lIdx = 0; lScore = 0; lMissed = [];
+      if (!lData.length) { showGenError("Aucun contenu genere. Reessayez."); return; }
+      if (type === "exam") startExamTimer();
+      renderStep();
+    }
+  });
+}
+
+// ── Chunk par chunk pour summary/glossary ────────────
+function genModuleChunked(type, chunks, fname, idx, parts) {
+  var lc = document.getElementById("lcont");
+  if (!lc) return;
+  lc.innerHTML = loadingHTML("Partie " + (idx+1) + "/" + chunks.length + " \u2014 " + esc(fname));
+  document.getElementById("l-pf").style.width = Math.round(idx / chunks.length * 100) + "%";
+  document.getElementById("l-ct").textContent = "Analyse " + (idx+1) + "/" + chunks.length;
+
+  callAI(getPrompt(type, chunks[idx]), function(text, err) {
+    if (!err && text) parts.push(text);
+    if (idx + 1 < chunks.length) {
+      genModuleChunked(type, chunks, fname, idx + 1, parts);
+    } else {
+      if (type === "summary") { renderSummary(parts.join("\n\n---\n\n")); return; }
+      if (type === "glossary") {
+        var allTerms = [], seen = {}, unique = [];
+        for (var i = 0; i < parts.length; i++) {
+          try {
+            var cl = parts[i].replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+            var it = JSON.parse(cl);
+            if (Array.isArray(it)) allTerms = allTerms.concat(it);
+          } catch(e) {}
+        }
+        for (var i = 0; i < allTerms.length; i++) {
+          var k = (allTerms[i].term || "").toLowerCase();
+          if (!seen[k]) { seen[k] = true; unique.push(allTerms[i]); }
+        }
+        renderGlossary(JSON.stringify(unique));
+      }
+    }
+  });
+}
+
+// ── Envoi direct si un seul chunk ─────────────────────
+function genModuleSingle(type, ctx, fname) {
+  callAI(getPrompt(type, ctx), function(text, err) {
+    if (err) { showGenError(err); return; }
+    if (type === "summary")  { renderSummary(text);  return; }
+    if (type === "glossary") { renderGlossary(text); return; }
+    try {
+      var clean = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      lData = JSON.parse(clean);
+      lIdx = 0; lScore = 0; lMissed = [];
+      if (type === "exam") startExamTimer();
+      renderStep();
+    } catch(e) { showGenError("Format JSON invalide. Reessayez."); }
+  });
+}
+
+// ── Affichage erreur centralise ───────────────────────
+function showGenError(msg) {
+  var lc = document.getElementById("lcont");
+  if (!lc) return;
+  lc.innerHTML =
+    "<div class=\"gload\"><div style=\"font-size:44px\">&#10060;</div>" +
+    "<div class=\"g-t\">Erreur IA</div>" +
+    "<div class=\"g-s\">" + esc(msg) + "</div>" +
+    "<button class=\"btn btn-ghost\" style=\"margin-top:20px\" onclick=\"launchLearn(lType,curFid)\">&#8635; Reessayer</button>" +
+    "<button class=\"btn btn-ghost\" style=\"margin-top:8px\" onclick=\"exitLearn()\">&#8592; Retour</button></div>";
+}
+
+// ── Progress bar ──────────────────────────────────────
+function updProg() {
+  var pct = lData.length ? Math.round(lIdx / lData.length * 100) : 0;
+  document.getElementById("l-pf").style.width  = pct + "%";
+  document.getElementById("l-ct").textContent  = lIdx + "/" + lData.length;
+}
+
+// ── Dispatcher ───────────────────────────────────────
+function renderStep() {
+  updProg();
+  if (lIdx >= lData.length) { showResult(); return; }
+  var item = lData[lIdx];
+  var lc   = document.getElementById("lcont");
+  if (lType === "flashcard") renderFC(item, lc);
+  else if (lType === "qcm")  renderQCM(item, lc);
+  else if (lType === "vf")   renderVF(item, lc);
+  else if (lType === "fill") renderFill(item, lc);
+  else if (lType === "match") renderMatch(lc);
+  else if (lType === "exam") renderExamStep(item, lc);
+}
+function nextStep() { lIdx++; renderStep(); }
+
+// ── FLASHCARDS (Spaced Repetition SM-2) ──────────────
+var fcFlip = false;
+
+function renderFC(item, lc) {
+  var dots = "";
+  for (var i = 0; i < lData.length; i++) {
+    dots += "<div class=\"fcd " + (i < lIdx ? "done" : i === lIdx ? "active" : "") + "\"></div>";
+  }
+  var srData = gSR(CU.id, curFid);
+  var cardKey = "fc_" + lIdx;
+  var sr      = srData[cardKey];
+  var srBadge = "";
+  if (sr) {
+    var due = new Date(sr.due);
+    var now = new Date();
+    srBadge = "<div class=\"sr-badge " + (due <= now ? "sr-due" : "sr-ok") + "\">" +
+              (due <= now ? "A revoir" : "Intervalle: " + sr.interval + "j") + "</div>";
+  }
+  lc.innerHTML =
+    "<div class=\"fc-wrap\">" +
+    "<div class=\"fc\" id=\"fc\" onclick=\"flipFC()\">" +
+      "<div class=\"fc-face fc-fr\">" +
+        "<div class=\"fc-lb\">Question</div>" +
+        "<div class=\"fc-tx\">" + esc(item.front) + "</div>" +
+        "<div class=\"fc-hint\">Appuyez pour reveler</div>" +
+      "</div>" +
+      "<div class=\"fc-face fc-bk\">" +
+        "<div class=\"fc-lb\">Reponse</div>" +
+        "<div class=\"fc-tx\">" + esc(item.back) + "</div>" +
+        srBadge +
+      "</div>" +
+    "</div></div>" +
+    "<div class=\"fc-dots\">" + dots + "</div>" +
+    "<div class=\"fc-acts\" id=\"fc-acts\" style=\"display:none\">" +
+      "<button class=\"fc-btn fc-no\"  onclick=\"fcAns(0)\">&#10005; Rate</button>" +
+      "<button class=\"fc-btn fc-med\" onclick=\"fcAns(3)\">&#9711; Difficile</button>" +
+      "<button class=\"fc-btn fc-yes\" onclick=\"fcAns(5)\">&#10003; Facile</button>" +
+    "</div>" +
+    "<div style=\"text-align:center;padding:0 0 10px\">" +
+      "<button class=\"btn btn-ghost\" onclick=\"flipFC()\">Retourner la carte</button>" +
+    "</div>";
+  fcFlip = false;
+}
+
+function flipFC() {
+  fcFlip = !fcFlip;
+  var fc = document.getElementById("fc");
+  if (fcFlip) fc.classList.add("flip"); else fc.classList.remove("flip");
+  if (fcFlip) document.getElementById("fc-acts").style.display = "flex";
+}
+
+function fcAns(quality) {
+  var srData  = gSR(CU.id, curFid);
+  var cardKey = "fc_" + lIdx;
+  var sr      = srData[cardKey] || { interval: 1, ease: 2.5, reps: 0 };
+  if (quality >= 3) {
+    lScore++;
+    if (sr.reps === 0)      sr.interval = 1;
+    else if (sr.reps === 1) sr.interval = 6;
+    else                    sr.interval = Math.round(sr.interval * sr.ease);
+    sr.ease = Math.max(1.3, sr.ease + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+    sr.reps++;
+  } else {
+    lMissed.push(lData[lIdx]);
+    sr.interval = 1; sr.reps = 0;
+  }
+  sr.due = new Date(Date.now() + sr.interval * 86400000).toISOString();
+  srData[cardKey] = sr;
+  sSR(CU.id, curFid, srData);
+  lIdx++; fcFlip = false; renderStep();
+}
+
+// ── Exit and result ───────────────────────────────────
+function exitLearn() {
+  stopExamTimer();
+  goScreen("app");
+  var bnis = document.querySelectorAll(".bni");
+  showPage("modules", bnis[1] || null);
+  for (var i = 0; i < bnis.length; i++) bnis[i].classList.remove("active");
+  if (bnis[1]) bnis[1].classList.add("active");
+}
+
+function showResult() {
+  stopExamTimer();
+  var total = lData.length;
+  var pct   = total ? Math.round(lScore / total * 100) : 0;
+  var st    = gSt(CU.id);
+  st.scores = st.scores || [];
+  st.scores.push({ type: lType, pct: pct, score: lScore, total: total,
+                   fid: curFid, fname: curFnm, date: dateKey() });
+  if (st.scores.length > 100) st.scores.shift();
+  sSt(CU.id, st);
+  checkBadges();
+
+  document.getElementById("l-pf").style.width = "100%";
+  document.getElementById("l-ct").textContent = "Termine !";
+
+  var medal = pct >= 90 ? "&#127942;" : pct >= 70 ? "&#127881;" : pct >= 50 ? "&#128077;" : "&#128170;";
+  var msg   = pct >= 90 ? "Maitrise parfaite !" :
+              pct >= 70 ? "Tres bien ! Continuez." :
+              pct >= 50 ? "Bien, encore un peu de revision." : "Reessayez, vous progresserez !";
+
+  var retryBtn = lMissed.length
+    ? "<button class=\"btn btn-ghost btn-full\" onclick=\"retryMissed()\">&#128260; Retravailler les " + lMissed.length + " erreurs</button>"
+    : "";
+
+  document.getElementById("lcont").innerHTML =
+    "<div class=\"rscreen\">" +
+    "<div class=\"r-medal\">" + medal + "</div>" +
+    "<div class=\"r-score\">" + lScore + "/" + total + "</div>" +
+    "<div class=\"r-pct\">" + pct + "% de reussite</div>" +
+    "<div class=\"r-msg\">" + msg + "</div>" +
+    "<div class=\"r-btns\">" +
+      "<button class=\"btn btn-gold btn-full\" onclick=\"launchLearn(lType,curFid)\">&#8635; Recommencer</button>" +
+      retryBtn +
+      "<button class=\"btn btn-ghost btn-full\" onclick=\"exitLearn()\">&#8592; Autres modules</button>" +
+    "</div></div>";
+  renderDash();
+}
+
+function retryMissed() {
+  if (!lMissed.length) return;
+  lData   = lMissed.slice();
+  lIdx    = 0; lScore = 0; lMissed = [];
+  document.getElementById("l-pf").style.width = "0%";
+  updProg(); renderStep();
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║  MODULE 06 — QUIZ MODULES                        ║
+// ║  QCM, Vrai/Faux, Fill-in-blank, Match            ║
+// ╚══════════════════════════════════════════════════╝
+
+// ── QCM ──────────────────────────────────────────────
+function renderQCM(item, lc) {
+  var opts = "";
+  for (var i = 0; i < item.opts.length; i++) {
+    opts += "<div class=\"qopt\" id=\"o" + i + "\" data-idx=\"" + i + "\" data-correct=\"" + item.correct + "\"" +
+            " onclick=\"ansQ(this)\">" +
+            "<span class=\"opt-l\">" + "ABCD"[i] + "</span>" + esc(item.opts[i]) + "</div>";
+  }
+  lc.innerHTML =
+    "<div class=\"qcard\">" +
+      "<div class=\"q-num\">Question " + (lIdx + 1) + " / " + lData.length + "</div>" +
+      "<div class=\"q-q\">" + esc(item.q) + "</div>" +
+      "<div class=\"q-opts\">" + opts + "</div>" +
+      "<div class=\"q-exp\" id=\"q-exp\">&#128161; " + esc(item.exp || "") + "</div>" +
+    "</div>" +
+    "<button class=\"btn btn-ghost btn-full\" id=\"q-nxt\" style=\"display:none\" onclick=\"nextStep()\">Suivant &#8594;</button>";
+}
+
+function ansQ(el) {
+  var idx     = parseInt(el.dataset.idx);
+  var correct = parseInt(el.dataset.correct);
+  var opts    = document.querySelectorAll(".qopt");
+  // Check if already answered
+  for (var i = 0; i < opts.length; i++) {
+    if (opts[i].classList.contains("correct") || opts[i].classList.contains("wrong")) return;
+  }
+  for (var i = 0; i < opts.length; i++) opts[i].style.pointerEvents = "none";
+  document.getElementById("o" + idx).classList.add(idx === correct ? "correct" : "wrong");
+  if (idx !== correct) document.getElementById("o" + correct).classList.add("correct");
+  else lScore++;
+  if (idx !== correct) lMissed.push(lData[lIdx]);
+  document.getElementById("q-exp").classList.add("show");
+  document.getElementById("q-nxt").style.display = "flex";
+}
+
+// ── Vrai / Faux ───────────────────────────────────────
+function renderVF(item, lc) {
+  lc.innerHTML =
+    "<div class=\"vcard\">" +
+      "<div class=\"q-num\">Affirmation " + (lIdx + 1) + " / " + lData.length + "</div>" +
+      "<div class=\"v-stmt\">" + esc(item.statement) + "</div>" +
+      "<div class=\"vf-btns\">" +
+        "<button class=\"vfb\" id=\"vt\" data-given=\"true\"  data-correct=\"" + item.answer + "\" onclick=\"ansVF(this)\">&#10003;<span>Vrai</span></button>" +
+        "<button class=\"vfb\" id=\"vf2\" data-given=\"false\" data-correct=\"" + item.answer + "\" onclick=\"ansVF(this)\">&#10005;<span>Faux</span></button>" +
+      "</div>" +
+    "</div>" +
+    "<div class=\"v-exp\" id=\"v-exp\">&#128161; " + esc(item.exp || "") + "</div>" +
+    "<button class=\"btn btn-ghost btn-full\" id=\"v-nxt\" style=\"display:none\" onclick=\"nextStep()\">Suivant &#8594;</button>";
+}
+
+function ansVF(el) {
+  var nxt = document.getElementById("v-nxt");
+  if (nxt.style.display !== "none") return;
+  var given   = el.dataset.given   === "true";
+  var correct = el.dataset.correct === "true";
+  var ok      = (given === correct);
+  if (ok) lScore++; else lMissed.push(lData[lIdx]);
+  el.classList.add(ok ? "correct" : "wrong");
+  var otherId = (el.id === "vt") ? "vf2" : "vt";
+  var other   = document.getElementById(otherId);
+  if (other) { other.disabled = true; other.style.opacity = ".4"; }
+  document.getElementById("v-exp").classList.add("show");
+  nxt.style.display = "flex";
+}
+
+// ── Fill-in-blank ─────────────────────────────────────
+function renderFill(item, lc) {
+  _fillAns      = item.answer;
+  var disp      = esc(item.sentence).replace("_____", "<span class=\"fi-blank\">_____</span>");
+  var hint      = item.hint
+    ? "<div style=\"font-size:12px;color:var(--tx3);margin-bottom:12px\">&#128161; Indice : " + esc(item.hint) + "</div>"
+    : "";
+  lc.innerHTML =
+    "<div class=\"ficard\">" +
+      "<div class=\"q-num\">Phrase " + (lIdx + 1) + " / " + lData.length + "</div>" +
+      "<div class=\"fi-q\">" + disp + "</div>" +
+      hint +
+      "<input class=\"fi-inp\" id=\"fi-inp\" placeholder=\"Votre reponse...\" autocomplete=\"off\" autocapitalize=\"off\">" +
+      "<div class=\"fi-ans\" id=\"fi-ans\">&#9989; Reponse : <strong>" + esc(item.answer) + "</strong></div>" +
+    "</div>" +
+    "<button class=\"btn btn-gold btn-full\" id=\"fi-sub\" onclick=\"checkFill()\">Verifier &#8594;</button>" +
+    "<button class=\"btn btn-ghost btn-full\" id=\"fi-nxt\" style=\"display:none;margin-top:8px\" onclick=\"nextStep()\">Suivant &#8594;</button>";
+
+  var inp = document.getElementById("fi-inp");
+  if (inp) {
+    inp.addEventListener("keydown", function(e) { if (e.key === "Enter") checkFill(); });
+    setTimeout(function() { inp.focus(); }, 300);
+  }
+}
+
+function checkFill() {
+  var inp = document.getElementById("fi-inp");
+  var nxt = document.getElementById("fi-nxt");
+  if (!inp || nxt.style.display !== "none") return;
+  var given   = inp.value.trim().toLowerCase();
+  var correct = _fillAns.trim().toLowerCase();
+  var ok = given === correct ||
+    (correct.length > 3 && given.length >= 3 &&
+     (correct.indexOf(given) !== -1 || given.indexOf(correct) !== -1));
+  inp.classList.add(ok ? "ok" : "ko");
+  if (ok) lScore++; else lMissed.push(lData[lIdx]);
+  document.getElementById("fi-ans").classList.add("show");
+  document.getElementById("fi-sub").style.display = "none";
+  nxt.style.display = "flex";
+}
+
+// ── Match (Associations) ──────────────────────────────
+function renderMatch(lc) {
+  if (lIdx === 0) {
+    matchPairs   = [];
+    matchSel     = null;
+    matchMatched = 0;
+    for (var i = 0; i < lData.length; i++) {
+      matchPairs.push({ id: i, term: lData[i].term, definition: lData[i].definition, done: false });
+    }
+  }
+  function shuffle(a) {
+    var b = a.slice();
+    for (var i = b.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = b[i]; b[i] = b[j]; b[j] = t;
+    }
+    return b;
+  }
+  var terms = shuffle(matchPairs.slice());
+  var defs  = shuffle(matchPairs.slice());
+  var th = "", dh = "";
+  for (var i = 0; i < terms.length; i++) {
+    var p = terms[i];
+    th += "<div class=\"mt " + (p.done ? "ok" : "") + "\" id=\"mt" + p.id + "\" data-id=\"" + p.id + "\" onclick=\"selT(this)\">" +
+          "<div class=\"mt-w\">" + esc(p.term) + "</div>" +
+          "<div class=\"mt-d\">" + esc(p.definition) + "</div></div>";
+  }
+  for (var i = 0; i < defs.length; i++) {
+    var p = defs[i];
+    dh += "<div class=\"mt " + (p.done ? "ok" : "") + "\" id=\"md" + p.id + "\" data-id=\"" + p.id + "\" onclick=\"selD(this)\">" +
+          "<div class=\"mt-w\" style=\"font-size:12px;font-weight:400;line-height:1.4;color:var(--tx2)\">" + esc(p.definition) + "</div></div>";
+  }
+  lc.innerHTML =
+    "<div class=\"match-instr\">Associez chaque terme a sa definition</div>" +
+    "<div class=\"match-wrap\"><div>" + th + "</div><div>" + dh + "</div></div>";
+  updProg();
+}
+
+function selT(el) {
+  matchSel = { type: "term", id: parseInt(el.dataset.id) };
+  document.querySelectorAll(".mt").forEach(function(e) { e.classList.remove("sel"); });
+  el.classList.add("sel");
+}
+
+function selD(el) {
+  if (!matchSel) return;
+  var tid = matchSel.id;
+  var did = parseInt(el.dataset.id);
+  if (tid === did) {
+    matchPairs[tid].done = true; matchMatched++; lScore++;
+    var tel = document.getElementById("mt" + tid);
+    var del = document.getElementById("md" + did);
+    if (tel) { tel.classList.remove("sel"); tel.classList.add("ok"); }
+    if (del) del.classList.add("ok");
+    if (matchMatched === matchPairs.length) { lIdx = lData.length; showResult(); }
+  } else {
+    var tel = document.getElementById("mt" + tid);
+    var del = document.getElementById("md" + did);
+    lMissed.push(lData[tid]);
+    if (tel) tel.classList.add("ko");
+    if (del) del.classList.add("ko");
+    setTimeout(function() {
+      var t2 = document.getElementById("mt" + tid);
+      var d2 = document.getElementById("md" + did);
+      if (t2) t2.classList.remove("ko", "sel");
+      if (d2) d2.classList.remove("ko");
+    }, 700);
+  }
+  matchSel = null;
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║  MODULE 07 — EXAM + SUMMARY + GLOSSARY           ║
+// ║  Timed exam, AI summary, auto glossary           ║
+// ╚══════════════════════════════════════════════════╝
+
+// ── EXAM with countdown timer ─────────────────────────
+var examTimer    = null;
+var examSeconds  = 0;
+
+function startExamTimer() {
+  var mins = lData.length * 2; // 2 min per question
+  examSeconds = mins * 60;
+  stopExamTimer();
+  renderTimerBadge();
+  examTimer = setInterval(function() {
+    examSeconds--;
+    renderTimerBadge();
+    if (examSeconds <= 0) {
+      stopExamTimer();
+      autoFinishExam();
+    }
+  }, 1000);
+}
+
+function stopExamTimer() {
+  if (examTimer) { clearInterval(examTimer); examTimer = null; }
+  var badge = document.getElementById("l-badge");
+  if (badge) badge.style.display = "none";
+}
+
+function renderTimerBadge() {
+  var badge = document.getElementById("l-badge");
+  if (!badge) return;
+  badge.style.display = "flex";
+  var m = Math.floor(examSeconds / 60);
+  var s = examSeconds % 60;
+  badge.textContent = (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+  badge.className   = "l-badge" + (examSeconds < 60 ? " l-badge-warn" : "");
+}
+
+function autoFinishExam() {
+  // Count unanswered questions as wrong
+  notify("Temps ecoule !", true);
+  showResult();
+}
+
+function renderExamStep(item, lc) {
+  if (item.type === "qcm") {
+    renderQCM(item, lc);
+  } else if (item.type === "vf") {
+    // Adapt vf item shape: statement exists on item directly
+    renderVF(item, lc);
+  } else if (item.type === "fill") {
+    renderFill(item, lc);
+  } else {
+    nextStep(); // skip unknown type
+  }
+}
+
+// ── SUMMARY ──────────────────────────────────────────
+function renderSummary(md) {
+  var html = md
+    .replace(/^### (.+)$/gm, "<h3>$1</h3>")
+    .replace(/^## (.+)$/gm,  "<h2>$1</h2>")
+    .replace(/^# (.+)$/gm,   "<h1>$1</h1>")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g,   "<em>$1</em>")
+    .replace(/^[-*] (.+)$/gm, "<li>$1</li>")
+    .replace(/(<li>.+<\/li>\n?)+/g, function(m) { return "<ul>" + m + "</ul>"; })
+    .replace(/\n\n/g, "<br><br>")
+    .replace(/\n/g,   "<br>");
+
+  document.getElementById("l-pf").style.width = "100%";
+  document.getElementById("l-ct").textContent = "Termine";
+  document.getElementById("lcont").innerHTML =
+    "<div class=\"sumc\">" + html + "</div>" +
+    "<div style=\"margin-top:18px\">" +
+    "<button class=\"btn btn-ghost btn-full\" onclick=\"exitLearn()\">&#8592; Retour aux modules</button>" +
+    "</div>";
+}
+
+// ── GLOSSARY ──────────────────────────────────────────
+function renderGlossary(text) {
+  var items = [];
+  try {
+    var clean = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    items = JSON.parse(clean);
+  } catch(e) {
+    document.getElementById("lcont").innerHTML =
+      "<div class=\"gload\"><div style=\"font-size:44px\">&#9888;</div>" +
+      "<div class=\"g-t\">Erreur de format</div>" +
+      "<div class=\"g-s\">Reessayez</div>" +
+      "<button class=\"btn btn-ghost\" style=\"margin-top:20px\" onclick=\"exitLearn()\">&#8592; Retour</button></div>";
+    return;
+  }
+  document.getElementById("l-pf").style.width = "100%";
+  document.getElementById("l-ct").textContent = items.length + " termes";
+
+  // Sort alphabetically
+  items.sort(function(a, b) { return a.term.localeCompare(b.term); });
+
+  var search = "<input type=\"search\" class=\"srch\" placeholder=\"Rechercher un terme...\" " +
+               "id=\"gloss-srch\" oninput=\"filterGloss(this.value)\" style=\"margin-bottom:12px\">";
+  var list   = "";
+  for (var i = 0; i < items.length; i++) {
+    list += "<div class=\"gloss-item\" data-term=\"" + esc(items[i].term.toLowerCase()) + "\">" +
+            "<div class=\"gloss-term\">" + esc(items[i].term) + "</div>" +
+            "<div class=\"gloss-def\">"  + esc(items[i].definition) + "</div>" +
+            "</div>";
+  }
+  document.getElementById("lcont").innerHTML =
+    search +
+    "<div id=\"gloss-list\">" + list + "</div>" +
+    "<div style=\"margin-top:18px\">" +
+    "<button class=\"btn btn-ghost btn-full\" onclick=\"exitLearn()\">&#8592; Retour aux modules</button>" +
+    "</div>";
+}
+
+function filterGloss(q) {
+  q = q.toLowerCase();
+  var items = document.querySelectorAll(".gloss-item");
+  for (var i = 0; i < items.length; i++) {
+    var term = items[i].dataset.term || "";
+    items[i].style.display = (!q || term.indexOf(q) !== -1) ? "" : "none";
+  }
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║  MODULE 08 — STATS + BADGES + GOALS              ║
+// ║  Progression chart, badges, daily goals          ║
+// ╚══════════════════════════════════════════════════╝
+
+// ── Stats page ────────────────────────────────────────
+function renderStats() {
+  if (!CU) return;
+  var st     = gSt(CU.id);
+  var scores = st.scores || [];
+  var page   = document.getElementById("page-stats");
+  if (!page) return;
+
+  // Compute per-module averages
+  var byType = {};
+  for (var i = 0; i < scores.length; i++) {
+    var s = scores[i];
+    var t = s.type || "unknown";
+    if (!byType[t]) byType[t] = { sum: 0, count: 0 };
+    byType[t].sum   += (s.pct !== undefined ? s.pct : s);
+    byType[t].count++;
+  }
+
+  // Last 14 sessions chart data
+  var recent = scores.slice(-14);
+  var chartBars = "";
+  for (var i = 0; i < recent.length; i++) {
+    var s   = recent[i];
+    var pct = s.pct !== undefined ? s.pct : s;
+    var col = pct >= 70 ? "var(--green2)" : pct >= 50 ? "var(--gold)" : "var(--red2)";
+    chartBars +=
+      "<div class=\"bar-wrap\">" +
+        "<div class=\"bar\" style=\"height:" + pct + "%;background:" + col + "\" title=\"" + pct + "%\"></div>" +
+        "<div class=\"bar-lbl\">" + pct + "</div>" +
+      "</div>";
+  }
+  if (!chartBars) chartBars = "<div style=\"color:var(--tx3);font-size:13px;padding:20px\">Aucune session encore.</div>";
+
+  // Per-module breakdown
+  var moduleRows = "";
+  var modIcons   = { flashcard:"\uD83C\uDFB3", qcm:"\uD83C\uDFAF", vf:"\u26A1",
+                     fill:"\u270F\uFE0F", match:"\uD83D\uDD17", summary:"\uD83D\uDCDD",
+                     exam:"\uD83C\uDF93", glossary:"\uD83D\uDCDA" };
+  for (var t in byType) {
+    var avg = Math.round(byType[t].sum / byType[t].count);
+    moduleRows +=
+      "<div class=\"stat-row\">" +
+        "<span class=\"sr-ic\">" + (modIcons[t] || "?") + "</span>" +
+        "<span class=\"sr-nm\">" + (MNAMES[t] || t) + "</span>" +
+        "<span class=\"sr-cnt\">" + byType[t].count + " sessions</span>" +
+        "<div class=\"sr-bar\">" +
+          "<div class=\"sr-fill\" style=\"width:" + avg + "%;background:" +
+            (avg >= 70 ? "var(--green2)" : avg >= 50 ? "var(--gold)" : "var(--red2)") + "\"></div>" +
+        "</div>" +
+        "<span class=\"sr-pct\">" + avg + "%</span>" +
+      "</div>";
+  }
+  if (!moduleRows) moduleRows = "<div style=\"color:var(--tx3);font-size:13px\">Aucune donnee encore.</div>";
+
+  // Badges
+  var badgesHtml = renderBadgesHTML(st.badges || []);
+
+  // Goals
+  var goal      = (st.goals && st.goals.dailyMin) || 20;
+  var todaySess = scores.filter(function(s) { return s.date === dateKey(); }).length;
+  var goalPct   = Math.min(100, Math.round(todaySess * 10 / goal * 100));
+
+  page.innerHTML =
+    "<div class=\"pg-title\">Statistiques</div>" +
+    "<div class=\"pg-sub\">Votre progression en detail</div>" +
+
+    // Goal
+    "<div class=\"goal-card\">" +
+      "<div class=\"goal-top\">" +
+        "<span>\uD83C\uDFAF Objectif du jour</span>" +
+        "<span>" + todaySess + " / " + Math.ceil(goal / 10) + " sessions</span>" +
+      "</div>" +
+      "<div class=\"prog-bar\" style=\"margin:8px 0 6px\">" +
+        "<div class=\"prog-fill\" style=\"width:" + goalPct + "%\"></div>" +
+      "</div>" +
+      "<div style=\"font-size:11px;color:var(--tx3)\">" +
+        "Objectif : " + goal + " min/jour \u2014 " +
+        "<span style=\"cursor:pointer;color:var(--gold2)\" onclick=\"openGoalModal()\">Modifier</span>" +
+      "</div>" +
+    "</div>" +
+
+    // Chart
+    "<div class=\"sec-ttl\">14 dernieres sessions</div>" +
+    "<div class=\"chart-wrap\">" + chartBars + "</div>" +
+
+    // Per module
+    "<div class=\"sec-ttl\">Par module</div>" +
+    "<div class=\"module-stats\">" + moduleRows + "</div>" +
+
+    // Badges
+    "<div class=\"sec-ttl\">Badges</div>" +
+    "<div class=\"badges-grid\">" + badgesHtml + "</div>";
+}
+
+// ── Badges ────────────────────────────────────────────
+var ALL_BADGES = [
+  { id: "first",    label: "Premiere session",  icon: "\uD83C\uDF1F", check: function(st) { return (st.sessions||0) >= 1; } },
+  { id: "streak3",  label: "3 jours de suite",  icon: "\uD83D\uDD25", check: function(st) { return (st.streak||0) >= 3; } },
+  { id: "streak7",  label: "7 jours de suite",  icon: "\uD83C\uDF4E", check: function(st) { return (st.streak||0) >= 7; } },
+  { id: "streak30", label: "30 jours de suite", icon: "\uD83C\uDFC6", check: function(st) { return (st.streak||0) >= 30; } },
+  { id: "perfect",  label: "Score parfait",     icon: "\uD83E\uDD47", check: function(st) {
+    return (st.scores||[]).some(function(s) { return (s.pct !== undefined ? s.pct : s) === 100; });
+  }},
+  { id: "s10",      label: "10 sessions",       icon: "\uD83D\uDCDA", check: function(st) { return (st.sessions||0) >= 10; } },
+  { id: "s50",      label: "50 sessions",       icon: "\uD83D\uDEF8", check: function(st) { return (st.sessions||0) >= 50; } },
+  { id: "avg80",    label: "Moyenne >= 80%",    icon: "\uD83E\uDD8A", check: function(st) {
+    var sc = (st.scores||[]).map(function(s) { return s.pct !== undefined ? s.pct : s; });
+    if (!sc.length) return false;
+    return sc.reduce(function(a,b){return a+b;},0)/sc.length >= 80;
+  }},
+  { id: "allmod",   label: "Tous les modules",  icon: "\uD83C\uDF08", check: function(st) {
+    var types = {};
+    (st.scores||[]).forEach(function(s) { if (s.type) types[s.type] = 1; });
+    return types.flashcard && types.qcm && types.vf && types.fill && types.match;
+  }}
+];
+
+function checkBadges() {
+  if (!CU) return;
+  var st  = gSt(CU.id);
+  st.badges = st.badges || [];
+  var newBadge = false;
+  for (var i = 0; i < ALL_BADGES.length; i++) {
+    var b = ALL_BADGES[i];
+    if (st.badges.indexOf(b.id) === -1 && b.check(st)) {
+      st.badges.push(b.id);
+      newBadge = true;
+      notify(b.icon + " Badge debloque : " + b.label, "ok");
+    }
+  }
+  if (newBadge) sSt(CU.id, st);
+}
+
+function renderBadgesHTML(earned) {
+  var html = "";
+  for (var i = 0; i < ALL_BADGES.length; i++) {
+    var b  = ALL_BADGES[i];
+    var ok = earned.indexOf(b.id) !== -1;
+    html +=
+      "<div class=\"badge " + (ok ? "badge-on" : "badge-off") + "\">" +
+        "<div class=\"badge-ic\">" + b.icon + "</div>" +
+        "<div class=\"badge-lb\">" + b.label + "</div>" +
+      "</div>";
+  }
+  return html;
+}
+
+// ── Goals modal ───────────────────────────────────────
+function openGoalModal() {
+  var st   = gSt(CU.id);
+  var goal = (st.goals && st.goals.dailyMin) || 20;
+  var mc   = document.getElementById("mc");
+  mc.innerHTML =
+    "<div class=\"m-t\">\uD83C\uDFAF Objectif quotidien</div>" +
+    "<div class=\"m-s\">Combien de minutes souhaitez-vous etudier par jour ?</div>" +
+    "<label class=\"m-lb\">Minutes par jour</label>" +
+    "<input class=\"m-in\" id=\"m-goal\" type=\"number\" min=\"5\" max=\"240\" value=\"" + goal + "\">" +
+    "<button class=\"btn btn-gold btn-full\" onclick=\"saveGoal()\">Enregistrer</button>";
+  openModal();
+}
+
+function saveGoal() {
+  var val = parseInt(document.getElementById("m-goal").value);
+  if (isNaN(val) || val < 5) { notify("Minimum 5 minutes", true); return; }
+  var st = gSt(CU.id);
+  st.goals = st.goals || {};
+  st.goals.dailyMin = val;
+  sSt(CU.id, st);
+  closeModal();
+  renderStats();
+  notify("Objectif mis a jour", "ok");
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║  MODULE 09 — POMODORO                            ║
+// ║  Work/break timer with visual feedback           ║
+// ╚══════════════════════════════════════════════════╝
+
+var pomState    = "idle";   // idle | work | break
+var pomInterval = null;
+var pomRemaining = 0;
+var pomWorkMin  = 25;
+var pomBreakMin = 5;
+var pomCycles   = 0;
+
+function renderPomodoro() {
+  var page = document.getElementById("page-pomodoro");
+  if (!page) return;
+  var st     = gSt(CU.id);
+  var total  = st.pomodoroTotal || 0;
+
+  page.innerHTML =
+    "<div class=\"pg-title\">Pomodoro</div>" +
+    "<div class=\"pg-sub\">Travaillez par sessions chronometrees</div>" +
+
+    "<div class=\"pom-card\">" +
+      "<div class=\"pom-state\" id=\"pom-state\">" + pomStateLabel() + "</div>" +
+      "<div class=\"pom-ring\">" +
+        "<svg viewBox=\"0 0 120 120\" id=\"pom-svg\">" +
+          "<circle cx=\"60\" cy=\"60\" r=\"54\" fill=\"none\" stroke=\"var(--surf3)\" stroke-width=\"8\"/>" +
+          "<circle cx=\"60\" cy=\"60\" r=\"54\" fill=\"none\" stroke=\"" + pomStateColor() + "\" stroke-width=\"8\"" +
+            " stroke-dasharray=\"339.3\" stroke-dashoffset=\"" + pomDashOffset() + "\"" +
+            " stroke-linecap=\"round\" transform=\"rotate(-90 60 60)\" id=\"pom-arc\"/>" +
+        "</svg>" +
+        "<div class=\"pom-time\" id=\"pom-time\">" + fmtPomTime(pomRemaining || pomWorkMin * 60) + "</div>" +
+      "</div>" +
+      "<div class=\"pom-cycles\">Cycles completes : <strong id=\"pom-cycles\">" + pomCycles + "</strong></div>" +
+      "<div class=\"pom-btns\">" +
+        "<button class=\"btn btn-gold\" id=\"pom-start\" onclick=\"pomToggle()\">" + pomBtnLabel() + "</button>" +
+        "<button class=\"btn btn-ghost\" onclick=\"pomReset()\">&#8635; Reset</button>" +
+      "</div>" +
+      "<div class=\"pom-settings\">" +
+        "<label class=\"m-lb\">Travail (min)</label>" +
+        "<input class=\"m-in\" id=\"pom-w\" type=\"number\" min=\"1\" max=\"60\" value=\"" + pomWorkMin + "\" oninput=\"pomSetWork(this.value)\">" +
+        "<label class=\"m-lb\">Pause (min)</label>" +
+        "<input class=\"m-in\" id=\"pom-b\" type=\"number\" min=\"1\" max=\"30\" value=\"" + pomBreakMin + "\" oninput=\"pomSetBreak(this.value)\">" +
+      "</div>" +
+    "</div>" +
+    "<div class=\"goal-card\" style=\"margin-top:12px\">" +
+      "<div style=\"font-size:13px;font-weight:600\">Total Pomodoros : " + total + "</div>" +
+      "<div style=\"font-size:11px;color:var(--tx3);margin-top:3px\">" + Math.floor(total * pomWorkMin) + " minutes de travail total</div>" +
+    "</div>";
+}
+
+function pomStateLabel() {
+  if (pomState === "work")  return "\uD83D\uDD34 Concentration";
+  if (pomState === "break") return "\uD83D\uDFE2 Pause";
+  return "\u23F8 En attente";
+}
+function pomStateColor() {
+  if (pomState === "work")  return "var(--red2)";
+  if (pomState === "break") return "var(--green2)";
+  return "var(--gold)";
+}
+function pomBtnLabel() {
+  if (pomState === "idle")  return "&#9654; Demarrer";
+  if (pomState === "work")  return "&#9646;&#9646; Pause";
+  if (pomState === "break") return "&#9654; Reprendre";
+  return "&#9654; Demarrer";
+}
+function fmtPomTime(sec) {
+  var m = Math.floor(sec / 60);
+  var s = sec % 60;
+  return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+}
+function pomDashOffset() {
+  var total    = (pomState === "break" ? pomBreakMin : pomWorkMin) * 60;
+  var current  = pomRemaining || total;
+  var progress = total > 0 ? (current / total) : 1;
+  return 339.3 * (1 - progress);
+}
+
+function pomUpdateUI() {
+  var t  = document.getElementById("pom-time");
+  var a  = document.getElementById("pom-arc");
+  var st = document.getElementById("pom-state");
+  var bt = document.getElementById("pom-start");
+  var cy = document.getElementById("pom-cycles");
+  if (t)  t.textContent  = fmtPomTime(pomRemaining);
+  if (a)  { a.setAttribute("stroke-dashoffset", pomDashOffset()); a.setAttribute("stroke", pomStateColor()); }
+  if (st) st.textContent = pomStateLabel();
+  if (bt) bt.innerHTML   = pomBtnLabel();
+  if (cy) cy.textContent = pomCycles;
+}
+
+function pomToggle() {
+  if (pomState === "idle" || pomState === "break") {
+    pomState     = "work";
+    pomRemaining = pomRemaining || pomWorkMin * 60;
+    pomStartInterval();
+  } else if (pomState === "work") {
+    // Pause
+    clearInterval(pomInterval); pomInterval = null;
+    pomState = "break";
+    pomRemaining = pomBreakMin * 60;
+    pomStartInterval();
+  }
+  pomUpdateUI();
+}
+
+function pomStartInterval() {
+  if (pomInterval) clearInterval(pomInterval);
+  pomInterval = setInterval(function() {
+    pomRemaining--;
+    if (pomRemaining <= 0) {
+      if (pomState === "work") {
+        pomCycles++;
+        var st = gSt(CU.id);
+        st.pomodoroTotal = (st.pomodoroTotal || 0) + 1;
+        sSt(CU.id, st);
+        checkBadges();
+        notify("\uD83C\uDF4E Pomodoro termine ! Prenez une pause.", "ok");
+        pomState     = "break";
+        pomRemaining = pomBreakMin * 60;
+      } else {
+        notify("\u23F0 Pause terminee ! Pret a travailler.", "ok");
+        pomState     = "idle";
+        pomRemaining = pomWorkMin * 60;
+        clearInterval(pomInterval); pomInterval = null;
+      }
+    }
+    pomUpdateUI();
+  }, 1000);
+}
+
+function pomReset() {
+  clearInterval(pomInterval); pomInterval = null;
+  pomState     = "idle";
+  pomRemaining = pomWorkMin * 60;
+  pomUpdateUI();
+}
+
+function pomSetWork(v) {
+  var n = parseInt(v);
+  if (n >= 1 && n <= 60) { pomWorkMin = n; if (pomState === "idle") pomRemaining = n * 60; pomUpdateUI(); }
+}
+function pomSetBreak(v) {
+  var n = parseInt(v);
+  if (n >= 1 && n <= 30) { pomBreakMin = n; pomUpdateUI(); }
+}
+
+// ╔══════════════════════════════════════════════════╗
+// ║  MODULE 10 — MODAL SYSTEM                        ║
+// ║  Generic open/close, backdrop click              ║
+// ╚══════════════════════════════════════════════════╝
+
+function openModal() {
+  document.getElementById("modal").classList.add("open");
+}
+
+function closeModal() {
+  document.getElementById("modal").classList.remove("open");
+}
+
+// Dispatch modal by type string (for backward compat)
+function openModalType(type, extra) {
+  if (type === "folder")     { openFolderModal(); return; }
+  if (type === "addCourse")  { openAC(extra);     return; }
+  if (type === "pickFolder") { openPickFolder(extra); return; }
+  if (type === "goal")       { openGoalModal();   return; }
+}
+
+init();
+
+</script>
+</body>
+</html>
