@@ -3,78 +3,57 @@ name: Build DuoCompta APK
 on:
   push:
     branches: [ main, master ]
-  workflow_dispatch:  # Permet de lancer manuellement depuis GitHub
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
-      # 1. Récupérer le code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Installer Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # 3. Installer Java 17
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 4. Installer les dépendances npm (Capacitor)
       - name: Install dependencies
         run: npm install
 
-      # 5. Initialiser Capacitor
-      - name: Init Capacitor
-        run: npx cap init DuoCompta be.gauthierdoumont.duocompta --web-dir www
-
-      # 6. Ajouter la plateforme Android
       - name: Add Android platform
         run: npx cap add android
 
-      # 7. Copier le fichier de sécurité réseau
       - name: Setup network security config
         run: |
           mkdir -p android/app/src/main/res/xml
           cp network_security_config.xml android/app/src/main/res/xml/network_security_config.xml
 
-      # 8. Patcher AndroidManifest pour la sécurité réseau
       - name: Patch AndroidManifest
         run: |
           sed -i 's/<application/<application android:networkSecurityConfig="@xml\/network_security_config"/' \
             android/app/src/main/AndroidManifest.xml
 
-      # 9. Synchroniser les fichiers web
       - name: Sync web assets
         run: npx cap sync android
 
-      # 10. Rendre gradlew exécutable
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
-      # 11. Compiler l'APK debug
       - name: Build APK
         run: |
           cd android
           ./gradlew assembleDebug --no-daemon
 
-      # 12. Uploader l'APK comme artefact téléchargeable
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: DuoCompta-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
-
-      # 13. Afficher le lien de téléchargement
-      - name: Done
-        run: |
-          echo "✅ APK compilé avec succès !"
-          echo "📱 Télécharge l'APK dans l'onglet Actions > DuoCompta-APK"
