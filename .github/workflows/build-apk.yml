@@ -27,6 +27,13 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Verify www folder
+        run: |
+          echo "=== Contenu de www/ ==="
+          ls -la www/
+          echo "=== Taille index.html ==="
+          wc -c www/index.html
+
       - name: Add Android platform
         run: npx cap add android
 
@@ -35,13 +42,53 @@ jobs:
           mkdir -p android/app/src/main/res/xml
           cp network_security_config.xml android/app/src/main/res/xml/network_security_config.xml
 
-      - name: Patch AndroidManifest
+      - name: Patch AndroidManifest - network security
         run: |
           sed -i 's/<application/<application android:networkSecurityConfig="@xml\/network_security_config"/' \
             android/app/src/main/AndroidManifest.xml
 
+      - name: Patch AndroidManifest - allow internet
+        run: |
+          grep -q "INTERNET" android/app/src/main/AndroidManifest.xml || \
+          sed -i 's/<\/manifest>/    <uses-permission android:name="android.permission.INTERNET" \/>\n<\/manifest>/' \
+            android/app/src/main/AndroidManifest.xml
+
       - name: Sync web assets
         run: npx cap sync android
+
+      - name: Verify assets copied
+        run: |
+          echo "=== Assets dans Android ==="
+          ls -la android/app/src/main/assets/public/ || echo "Dossier public absent"
+
+      - name: Patch MainActivity - fix WebView
+        run: |
+          cat > android/app/src/main/java/be/gauthierdoumont/duocompta/MainActivity.java << 'JAVA'
+          package be.gauthierdoumont.duocompta;
+
+          import android.os.Bundle;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+            @Override
+            public void onCreate(Bundle savedInstanceState) {
+              super.onCreate(savedInstanceState);
+              
+              // Fix ecran noir - activer JavaScript et DOM storage
+              WebView webView = getBridge().getWebView();
+              WebSettings settings = webView.getSettings();
+              settings.setJavaScriptEnabled(true);
+              settings.setDomStorageEnabled(true);
+              settings.setAllowFileAccess(true);
+              settings.setAllowContentAccess(true);
+              settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+              settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+            }
+          }
+          JAVA
+          echo "MainActivity patched"
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
@@ -49,7 +96,7 @@ jobs:
       - name: Build APK
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tail -50
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
