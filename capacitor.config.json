@@ -1,0 +1,12 @@
+{
+  "appId": "be.gauthierdoumont.duocompta",
+  "appName": "DuoCompta",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#0e0f14"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}
