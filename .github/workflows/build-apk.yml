@@ -25,9 +25,6 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Copy index.html to assets
-        run: cp www/index.html app/src/main/assets/index.html
-
       - name: Generate launcher icons
         run: python3 generate_icons.py
 
