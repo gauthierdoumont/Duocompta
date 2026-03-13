@@ -464,6 +464,19 @@ input,select,textarea,button{font-family:inherit;}
   color:#0e0f14;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:600;flex-shrink:0;}
 .ibanner.show{display:flex;}
 .ib-x{margin-left:auto;font-size:16px;opacity:.7;padding:3px;}
+
+/* Toggle switch */
+.toggle-sw { position:relative; display:inline-block; width:48px; height:26px; }
+.toggle-sw input { opacity:0; width:0; height:0; }
+.toggle-sl { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0;
+  background:var(--bg2); border-radius:26px; transition:.3s; border:1px solid var(--bdr); }
+.toggle-sl:before { position:absolute; content:""; height:18px; width:18px; left:3px; bottom:3px;
+  background:var(--tx3); border-radius:50%; transition:.3s; }
+input:checked + .toggle-sl { background:var(--gold); border-color:var(--gold); }
+input:checked + .toggle-sl:before { transform:translateX(22px); background:#0e0f14; }
+/* Section titles in profile */
+.p-section-title { font-size:11px; font-weight:700; color:var(--tx3); text-transform:uppercase;
+  letter-spacing:.08em; margin:18px 0 8px; padding-left:2px; }
 </style>
 </head>
 <body>
@@ -488,7 +501,8 @@ input,select,textarea,button{font-family:inherit;}
     <input class="finp" id="inp-level" placeholder="ex : L3 Comptabilite">
     <label class="flbl">IA preferee</label>
     <select class="finp" id="inp-ai" onchange="updHelp()">
-      <option value="groq">Groq &#8212; Llama 3.3 (Gratuit &#127881;)</option>
+      <option value="local">IA Locale &#8212; Phi-3 Mini (sans internet)</option>
+      <option value="groq">Groq &#8212; Llama 3.3 (Gratuit)</option>
       <option value="claude">Claude &#8212; Anthropic</option>
       <option value="openai">ChatGPT &#8212; OpenAI</option>
       <option value="gemini">Gemini &#8212; Google</option>
@@ -600,7 +614,46 @@ input,select,textarea,button{font-family:inherit;}
       <div class="srow" onclick="openAC('')"><div class="s-ic">&#128196;</div><div class="s-tx"><div class="s-lb">Ajouter un cours</div><div class="s-sb">Importer PDF, Word, PowerPoint, Excel ou coller du texte</div></div><div class="s-ar">&#8250;</div></div>
       <div class="srow" onclick="showPage('modules')"><div class="s-ic">&#127918;</div><div class="s-tx"><div class="s-lb">Lancer un module</div><div class="s-sb">Choisir un mode d&#39;apprentissage</div></div><div class="s-ar">&#8250;</div></div>
       <div class="srow" onclick="showPage('stats')"><div class="s-ic">&#128202;</div><div class="s-tx"><div class="s-lb">Statistiques detaillees</div><div class="s-sb">Graphique, badges, objectifs</div></div><div class="s-ar">&#8250;</div></div>
-      <div class="srow" onclick="exportData()"><div class="s-ic">&#128190;</div><div class="s-tx"><div class="s-lb">Exporter mes donnees</div><div class="s-sb">Sauvegarde complete : cours, stats, cache IA, r&#233;p&#233;tition espac&#233;e</div></div><div class="s-ar">&#8250;</div></div>
+      <!-- IA LOCALE -->
+      <div class="p-section-title">&#129504; Intelligence Artificielle</div>
+      <div id="ai-mode-card" style="background:var(--card);border-radius:14px;padding:16px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div>
+            <div style="font-weight:700;color:var(--tx1)">IA Locale (Phi-3 Mini)</div>
+            <div style="font-size:12px;color:var(--tx3)">Sans internet &#8212; t&#233;l&#233;chargement unique 2.3 GB</div>
+          </div>
+          <label class="toggle-sw">
+            <input type="checkbox" id="local-ai-toggle" onchange="toggleLocalAI(this.checked)">
+            <span class="toggle-sl"></span>
+          </label>
+        </div>
+        <div id="local-ai-status" style="font-size:12px;color:var(--tx3);margin-bottom:10px">
+          V&#233;rification WebGPU...
+        </div>
+        <div id="local-ai-progress" style="display:none">
+          <div style="background:var(--bg2);border-radius:6px;height:6px;margin-bottom:6px">
+            <div id="local-ai-bar" style="background:var(--gold);height:6px;border-radius:6px;width:0%;transition:width 0.3s"></div>
+          </div>
+          <div id="local-ai-msg" style="font-size:11px;color:var(--tx3)">Chargement...</div>
+        </div>
+      </div>
+
+      <!-- INFOS COMPLEMENTAIRES -->
+      <div class="p-section-title">&#128203; Infos compl&#233;mentaires pour l&#39;IA</div>
+      <div style="background:var(--card);border-radius:14px;padding:16px;margin-bottom:10px">
+        <div style="font-size:13px;color:var(--tx2);margin-bottom:10px;line-height:1.5">
+          Donnez des informations &#224; l&#39;IA pour qu&#39;elle adapte son contenu &#224; votre situation :
+          niveau, points faibles, exam&#233;n &#224; venir, etc.
+        </div>
+        <textarea id="extra-info-ta" placeholder="Ex: Je suis en L2 comptabilit&#233;. Mon exam est dans 3 semaines. Je confonds souvent d&#233;bit et cr&#233;dit. Je veux des exercices pratiques plut&#244;t que th&#233;oriques..."
+          style="width:100%;min-height:100px;background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;padding:12px;color:var(--tx1);font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit"
+          onchange="saveExtraInfo(this.value)" oninput="saveExtraInfo(this.value)"></textarea>
+        <div style="font-size:11px;color:var(--tx3);margin-top:6px">Sauvegardes automatiquement &#8212; pris en compte dans toutes les g&#233;n&#233;rations IA</div>
+      </div>
+
+      <!-- EXPORT/IMPORT -->
+      <div class="p-section-title">&#128190; Donn&#233;es</div>
+      <div class="srow" onclick="exportData()"><div class="s-ic">&#128190;</div><div class="s-tx"><div class="s-lb">Exporter mes donn&#233;es</div><div class="s-sb">Sauvegarde compl&#232;te : cours, stats, cache IA, r&#233;p&#233;tition espac&#233;e</div></div><div class="s-ar">&#8250;</div></div>
       <div class="srow" onclick="importData()"><div class="s-ic">&#128229;</div><div class="s-tx"><div class="s-lb">Importer une sauvegarde</div><div class="s-sb">Restaurer depuis un fichier .json</div></div><div class="s-ar">&#8250;</div></div>
       <div class="srow" onclick="clearAndReset()"><div class="s-ic">&#128260;</div><div class="s-tx"><div class="s-lb">Modifier le profil</div><div class="s-sb">Changer nom, niveau ou cle API</div></div><div class="s-ar">&#8250;</div></div>
       <div style="text-align:center;margin-top:22px;padding-top:14px;border-top:1px solid var(--bdr)">
@@ -1250,24 +1303,123 @@ function pickIco(el) {
 
 // ╔══════════════════════════════════════════════════╗
 // ║  MODULE 04 — AI ENGINE                           ║
-// ║  Auto-detection du meilleur modele disponible    ║
+// ║  Local AI (WebLLM/Phi-3) + Cloud fallback        ║
+// ║  Cache local, infos complementaires              ║
 // ╚══════════════════════════════════════════════════╝
 
-var _modelCache = {};
+var _modelCache  = {};
+var _localEngine = null;   // moteur WebLLM si dispo
+var _localReady  = false;  // modele charge et pret
+var _localLoading = false; // chargement en cours
+var _useLocal    = false;  // bascule local/cloud
+var _extraInfo   = "";     // infos complementaires utilisateur
 
 var MODEL_PREFS = {
   groq:   ["llama-3.3-70b-versatile","llama-3.1-70b-versatile","llama3-70b-8192","mixtral-8x7b-32768","llama3-8b-8192"],
-  claude: ["claude-opus-4-5","claude-sonnet-4-5","claude-3-7-sonnet-20250219","claude-3-5-sonnet-20241022","claude-3-5-haiku-20241022","claude-3-opus-20240229","claude-3-haiku-20240307"],
+  claude: ["claude-opus-4-5","claude-sonnet-4-5","claude-3-7-sonnet-20250219","claude-3-5-sonnet-20241022","claude-3-5-haiku-20241022"],
   openai: ["gpt-4o","gpt-4o-mini","gpt-4-turbo","gpt-4","gpt-3.5-turbo"],
   gemini: ["gemini-2.0-flash","gemini-2.0-flash-lite","gemini-1.5-flash","gemini-1.5-pro","gemini-pro"]
 };
 
+// Modele local : Phi-3 Mini via WebLLM
+var LOCAL_MODEL_ID = "Phi-3-mini-4k-instruct-q4f16_1-MLC";
+
+// ── Detection WebGPU ──────────────────────────────────
+function hasWebGPU() {
+  return !!(navigator.gpu);
+}
+
+// ── Initialisation IA locale ──────────────────────────
+function initLocalAI(onProgress, onReady, onError) {
+  if (_localReady)  { onReady(); return; }
+  if (_localLoading){ return; }
+  if (!hasWebGPU()) { onError("WebGPU non supporte sur cet appareil"); return; }
+
+  _localLoading = true;
+
+  // Charger WebLLM depuis CDN
+  var script = document.createElement("script");
+  script.src = "https://esm.run/@mlc-ai/web-llm@0.2.73/lib/index.js";
+  script.type = "module";
+  script.onerror = function() {
+    _localLoading = false;
+    onError("Impossible de charger le moteur IA local");
+  };
+  document.head.appendChild(script);
+
+  // Alternative : import dynamique ES module
+  var code = document.createElement("script");
+  code.type = "module";
+  code.textContent = [
+    'import * as webllm from "https://esm.run/@mlc-ai/web-llm@0.2.73";',
+    'window._webllm = webllm;',
+    'const engine = new webllm.MLCEngine();',
+    'window._localEngine = engine;',
+    'engine.setInitProgressCallback(function(report) {',
+    '  window._localProgress && window._localProgress(report.text, report.progress);',
+    '});',
+    'engine.reload("' + LOCAL_MODEL_ID + '").then(function() {',
+    '  window._localReady = true;',
+    '  window._localLoading = false;',
+    '  window._localOnReady && window._localOnReady();',
+    '}).catch(function(e) {',
+    '  window._localLoading = false;',
+    '  window._localOnError && window._localOnError(e.message);',
+    '});'
+  ].join("\n");
+
+  window._localProgress = onProgress;
+  window._localOnReady  = function() { _localReady = true; _localLoading = false; onReady(); };
+  window._localOnError  = function(msg) { _localLoading = false; onError(msg); };
+
+  document.head.appendChild(code);
+}
+
+// ── Appel IA locale (WebLLM) ──────────────────────────
+function _callLocalAI(prompt, cb) {
+  if (!window._localEngine || !_localReady) {
+    cb(null, "Modele local non pret"); return;
+  }
+  var sysPrompt = "Tu es un professeur expert qui prepare ses etudiants aux examens. Reponds toujours en francais.";
+  if (_extraInfo) sysPrompt += "\n\nINFOS COMPLEMENTAIRES SUR L'ETUDIANT:\n" + _extraInfo;
+
+  window._localEngine.chat.completions.create({
+    messages: [
+      { role: "system", content: sysPrompt },
+      { role: "user",   content: prompt }
+    ],
+    temperature: 0.7,
+    max_tokens: 2000
+  }).then(function(reply) {
+    cb(reply.choices[0].message.content, null);
+  }).catch(function(e) {
+    cb(null, e.message);
+  });
+}
+
+// ── Appel IA cloud (inchange) ─────────────────────────
 function callAI(prompt, cb) {
-  var ai = CU.ai;
-  if (_modelCache[ai]) { _doCallAI(prompt, _modelCache[ai], cb); return; }
+  // Ajouter les infos complementaires au prompt si presentes
+  var finalPrompt = prompt;
+  if (_extraInfo) {
+    finalPrompt = "INFOS COMPLEMENTAIRES SUR L'ETUDIANT (a prendre en compte):\n" + _extraInfo + "\n\n" + prompt;
+  }
+
+  if (_useLocal && _localReady) {
+    _callLocalAI(finalPrompt, cb); return;
+  }
+
+  // Fallback cloud
+  var ai = CU ? CU.ai : "groq";
+  if (!CU || !CU.apiKey) {
+    // Pas de cle API et pas de local = erreur
+    cb(null, "Aucune IA disponible. Configurez une cle API ou activez l'IA locale.");
+    return;
+  }
+  if (_modelCache[ai]) { _doCallAI(finalPrompt, _modelCache[ai], cb); return; }
   detectBestModel(ai, CU.apiKey, function(model) {
     _modelCache[ai] = model;
-    _doCallAI(prompt, model, cb);
+    _doCallAI(finalPrompt, model, cb);
   });
 }
 
@@ -1291,7 +1443,7 @@ function detectBestModel(ai, apiKey, done) {
       var av = (d.data || []).map(function(m) { return m.id; });
       var pr = MODEL_PREFS.claude;
       for (var i = 0; i < pr.length; i++) if (av.indexOf(pr[i]) !== -1) { done(pr[i]); return; }
-      done(av.find(function(m) { return m.indexOf("sonnet") !== -1; }) || pr[pr.length-1]);
+      done(pr[pr.length-1]);
     }).catch(function() { done(MODEL_PREFS.claude[1]); });
 
   } else if (ai === "openai") {
@@ -1305,7 +1457,6 @@ function detectBestModel(ai, apiKey, done) {
     }).catch(function() { done(MODEL_PREFS.openai[0]); });
 
   } else {
-    // Gemini
     fetch("https://generativelanguage.googleapis.com/v1beta/models?key=" + apiKey)
     .then(function(r) { return r.json(); })
     .then(function(d) {
@@ -1322,6 +1473,7 @@ function detectBestModel(ai, apiKey, done) {
 function _doCallAI(prompt, model, cb) {
   var ai = CU.ai;
   var url, headers = { "Content-Type": "application/json" }, body;
+  var sysContent = "Tu es un professeur expert qui prepare ses etudiants aux examens. Reponds toujours en francais.";
 
   if (ai === "groq") {
     url = "https://api.groq.com/openai/v1/chat/completions";
@@ -1329,7 +1481,7 @@ function _doCallAI(prompt, model, cb) {
     body = JSON.stringify({
       model: model, max_tokens: 3000,
       messages: [
-        { role: "system", content: "Tu es un assistant pedagogique expert. Reponds toujours en francais." },
+        { role: "system", content: sysContent },
         { role: "user",   content: prompt }
       ]
     });
@@ -1344,7 +1496,7 @@ function _doCallAI(prompt, model, cb) {
     body = JSON.stringify({
       model: model, max_tokens: 3000,
       messages: [
-        { role: "system", content: "Tu es un assistant pedagogique expert. Reponds toujours en francais." },
+        { role: "system", content: sysContent },
         { role: "user",   content: prompt }
       ]
     });
@@ -1363,18 +1515,36 @@ function _doCallAI(prompt, model, cb) {
       if (d.error) {
         if (d.error.message && d.error.message.indexOf("not found") !== -1) delete _modelCache[ai];
         cb(null, d.error.message);
-      } else {
-        cb(d.content[0].text, null);
-      }
+      } else cb(d.content[0].text, null);
     } else {
       if (d.error) {
         if (d.error.message && (d.error.message.indexOf("not found") !== -1 || d.error.message.indexOf("not supported") !== -1)) delete _modelCache[ai];
         cb(null, d.error.message);
-      } else {
-        cb(d.candidates[0].content.parts[0].text, null);
-      }
+      } else cb(d.candidates[0].content.parts[0].text, null);
     }
   }).catch(function(e) { cb(null, e.message); });
+}
+
+// ── Gestion infos complementaires ─────────────────────
+function loadExtraInfo() {
+  if (CU) _extraInfo = DB.get("dc_extra_" + CU.id) || "";
+  return _extraInfo;
+}
+function saveExtraInfo(text) {
+  _extraInfo = text;
+  if (CU) DB.set("dc_extra_" + CU.id, text);
+}
+
+// ── Gestion mode local ────────────────────────────────
+function getAIMode() {
+  return _useLocal && _localReady ? "local" : "cloud";
+}
+function setAIMode(local) {
+  _useLocal = local;
+  DB.set("dc_aimode", local ? "local" : "cloud");
+}
+function loadAIMode() {
+  _useLocal = DB.get("dc_aimode") === "local";
 }
 
 // ── Prompts orientes examen ───────────────────────────
@@ -1440,11 +1610,11 @@ function getPrompt(type, ctx) {
       "en te concentrant UNIQUEMENT sur ce qui peut etre evalue en examen. " +
       "Utilise # pour le titre, ## pour les sections, ### pour les sous-sections, " +
       "**gras** pour les termes et regles indispensables, et des listes a puces. " +
-      "Structure: Notions fondamentales > Regles et formules > Distinctions importantes > Pieges a eviter > Ce qui tombe souvent a l'examen.\n\n" +
+      "Structure: Notions fondamentales > Regles et formules > Distinctions importantes > Pieges a eviter > Ce qui tombe souvent a l examen.\n\n" +
       "CONTENU:\n" + ctx;
 }
 
-// ── File text extraction ──────────────────────────────
+// ── Extraction fichiers (inchange) ────────────────────
 function readFile(file, callback) {
   var reader = new FileReader();
   var ext    = (file.name || "").split(".").pop().toLowerCase();
@@ -1486,7 +1656,7 @@ function extractPDF(buf, cb) {
             if (done === total) {
               var r = allText.trim();
               if (r.length < 50) extractPDFFallback(buf, cb);
-              else cb(r); // pas de limite — splitCtx gere le decoupage
+              else cb(r);
             }
           }).catch(function() { done++; if (done === total) cb(allText.trim() || "[PDF vide]"); });
         }).catch(function() { done++; if (done === total) cb(allText.trim() || "[PDF vide]"); });
@@ -2639,7 +2809,82 @@ function openModalType(type, extra) {
 }
 
 
-var AN = { groq: "Groq", claude: "Claude", openai: "ChatGPT", gemini: "Gemini" };
+var AN = { local: "IA Locale", groq: "Groq", claude: "Claude", openai: "ChatGPT", gemini: "Gemini" };
+
+// ── IA Locale : toggle et statut ─────────────────────
+function initAIStatusUI() {
+  var tog = document.getElementById("local-ai-toggle");
+  var sta = document.getElementById("local-ai-status");
+  if (!tog || !sta) return;
+
+  loadAIMode();
+  loadExtraInfo();
+
+  // Remplir textarea infos complementaires
+  var ta = document.getElementById("extra-info-ta");
+  if (ta) ta.value = _extraInfo;
+
+  if (!hasWebGPU()) {
+    sta.textContent = "WebGPU non supporte sur cet appareil — mode cloud uniquement";
+    tog.disabled = true;
+    return;
+  }
+  sta.textContent = "WebGPU disponible " + (_localReady ? "— Phi-3 Mini pret" : "— Modele non charge");
+  tog.checked = _useLocal;
+}
+
+function toggleLocalAI(enabled) {
+  if (!hasWebGPU()) {
+    notify("WebGPU non supporte sur cet appareil", true);
+    document.getElementById("local-ai-toggle").checked = false;
+    return;
+  }
+  if (enabled) {
+    setAIMode(true);
+    if (!_localReady) loadLocalModel();
+    else { notify("IA locale active", false); updateAIStatusUI("Phi-3 Mini pret et actif"); }
+  } else {
+    setAIMode(false);
+    notify("Mode cloud active", false);
+    updateAIStatusUI("Mode cloud — " + (CU ? (AN[CU.ai]||CU.ai) : "Groq"));
+  }
+}
+
+function loadLocalModel() {
+  var prog = document.getElementById("local-ai-progress");
+  var bar  = document.getElementById("local-ai-bar");
+  var msg  = document.getElementById("local-ai-msg");
+  var sta  = document.getElementById("local-ai-status");
+  if (prog) prog.style.display = "block";
+  if (sta)  sta.textContent = "Telechargement de Phi-3 Mini (2.3 GB — une seule fois)...";
+  notify("Telechargement Phi-3 Mini en cours... (2.3 GB)", false);
+
+  initLocalAI(
+    function(text, pct) {
+      if (bar) bar.style.width = Math.round((pct||0)*100) + "%";
+      if (msg) msg.textContent = text || "Chargement...";
+    },
+    function() {
+      if (prog) prog.style.display = "none";
+      updateAIStatusUI("Phi-3 Mini pret et actif");
+      notify("IA locale prete ! Generation sans internet activee.", false);
+      _localReady = true; _useLocal = true;
+    },
+    function(err) {
+      if (prog) prog.style.display = "none";
+      setAIMode(false);
+      var tog = document.getElementById("local-ai-toggle");
+      if (tog) tog.checked = false;
+      updateAIStatusUI("Erreur : " + err + " — mode cloud actif");
+      notify("IA locale indisponible — mode cloud actif", true);
+    }
+  );
+}
+
+function updateAIStatusUI(text) {
+  var sta = document.getElementById("local-ai-status");
+  if (sta) sta.textContent = text;
+}
 
 // ── Revisions du jour ─────────────────────────────────
 function renderReview() {
@@ -2661,32 +2906,25 @@ function renderReview() {
         due.push({ folder: fname, fid: fid, idx: j, card: cached.data[j], sr: null });
       } else {
         var diff = Math.ceil((new Date(sr.due) - now) / 86400000);
-        if (diff <= 0)       due.push({ folder: fname, fid: fid, idx: j, card: cached.data[j], sr: sr });
-        else if (diff <= 3)  upcoming.push({ folder: fname, fid: fid, idx: j, card: cached.data[j], sr: sr, diff: diff });
+        if (diff <= 0)      due.push({ folder: fname, fid: fid, idx: j, card: cached.data[j], sr: sr });
+        else if (diff <= 3) upcoming.push({ folder: fname, fid: fid, idx: j, card: cached.data[j], sr: sr, diff: diff });
       }
     }
   }
 
-  if (!fs.length) {
-    cont.innerHTML = rvEmpty("Aucun dossier", "Cr&#233;ez un dossier et ajoutez des cours pour commencer.");
-    return;
-  }
-  if (!due.length && !upcoming.length) {
-    cont.innerHTML = rvEmpty("&#127881; Tout est &#224; jour !", "Aucune carte &#224; revoir aujourd&#39;hui. Revenez demain !");
-    return;
-  }
+  if (!fs.length) { cont.innerHTML = rvEmpty("Aucun dossier", "Creez un dossier et ajoutez des cours pour commencer."); return; }
+  if (!due.length && !upcoming.length) { cont.innerHTML = rvEmpty("Tout est a jour !", "Aucune carte a revoir aujourd'hui. Revenez demain !"); return; }
 
   var h = "";
   if (due.length) {
     h += "<div style='background:linear-gradient(135deg,var(--gold),var(--gold2));border-radius:16px;padding:20px;margin-bottom:20px;text-align:center'>" +
          "<div style='font-size:36px;margin-bottom:6px'>&#129504;</div>" +
-         "<div style='font-size:22px;font-weight:700;color:#0e0f14'>" + due.length + " carte" + (due.length>1?"s":"") + " &#224; r&#233;viser</div>" +
-         "<div style='font-size:13px;color:#0e0f1488;margin:4px 0 14px'>R&#233;p&#233;tition espac&#233;e SM-2</div>" +
-         "<button class='btn' style='background:#0e0f14;color:var(--gold);border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:700' onclick='startReviewSession()'>&#9654; R&#233;viser maintenant</button>" +
+         "<div style='font-size:22px;font-weight:700;color:#0e0f14'>" + due.length + " carte" + (due.length>1?"s":"") + " a reviser</div>" +
+         "<div style='font-size:13px;color:#0e0f1488;margin:4px 0 14px'>Repetition espacee SM-2</div>" +
+         "<button class='btn' style='background:#0e0f14;color:var(--gold);border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:700' onclick='startReviewSession()'>&#9654; Reviser maintenant</button>" +
          "</div>";
   }
 
-  // Par dossier
   var byFolder = {};
   for (var i = 0; i < due.length; i++) {
     if (!byFolder[due[i].fid]) byFolder[due[i].fid] = { name: due[i].folder, cards: [] };
@@ -2706,12 +2944,12 @@ function renderReview() {
            "<div style='color:var(--tx3);font-size:11px;margin-top:2px'>" + (sr ? "intervalle "+sr.interval+"j" : "jamais vue") + "</div></div>";
     }
     if (fd.cards.length > 3) h += "<div style='color:var(--tx3);font-size:12px;text-align:center;padding:4px'>+" + (fd.cards.length-3) + " autres...</div>";
-    h += "<button class='btn btn-ghost' style='width:100%;margin-top:10px' data-fid='" + fids[i] + "' onclick='startFolderReview(this.dataset.fid)'>Réviser ce dossier</button></div>";
+    h += "<button class='btn btn-ghost' style='width:100%;margin-top:10px' data-fid='" + fids[i] + "' onclick='startFolderReview(this.dataset.fid)'>Reviser ce dossier</button></div>";
   }
 
   if (upcoming.length) {
     h += "<div style='margin-top:10px;padding:14px;background:var(--card);border-radius:14px'>" +
-         "<div style='font-weight:700;color:var(--tx2);margin-bottom:10px'>&#8987; &#192; venir</div>";
+         "<div style='font-weight:700;color:var(--tx2);margin-bottom:10px'>&#8987; A venir</div>";
     for (var i = 0; i < Math.min(upcoming.length, 5); i++) {
       var u = upcoming[i];
       h += "<div style='display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bdr)'>" +
@@ -2725,8 +2963,7 @@ function renderReview() {
 }
 
 function rvEmpty(title, msg) {
-  return "<div style='text-align:center;padding:50px 20px'>" +
-         "<div style='font-size:52px;margin-bottom:12px'>&#128218;</div>" +
+  return "<div style='text-align:center;padding:50px 20px'><div style='font-size:52px;margin-bottom:12px'>&#128218;</div>" +
          "<div style='font-size:18px;font-weight:700;color:var(--tx1);margin-bottom:8px'>" + title + "</div>" +
          "<div style='font-size:13px;color:var(--tx3);line-height:1.6'>" + msg + "</div></div>";
 }
@@ -2743,7 +2980,7 @@ function startReviewSession() {
         all.push({ fid: fs[i].id, fname: fs[i].name, idx: j, card: cached.data[j] });
     }
   }
-  if (!all.length) { notify("Aucune carte &#224; revoir !", true); return; }
+  if (!all.length) { notify("Aucune carte a reviser !", true); return; }
   launchReviewCards(all);
 }
 
@@ -2757,12 +2994,12 @@ function startFolderReview(fid) {
     var sr = srData["fc_" + j];
     if (!sr || new Date(sr.due) <= now) cards.push({ fid: fid, fname: fname, idx: j, card: cached.data[j] });
   }
-  if (!cards.length) { notify("Tout est &#224; jour pour ce dossier !", false); return; }
+  if (!cards.length) { notify("Tout est a jour pour ce dossier !", false); return; }
   launchReviewCards(cards);
 }
 
 function launchReviewCards(cards) {
-  lType = "flashcard"; curFid = cards[0].fid; curFnm = "R&#233;vision du jour";
+  lType = "flashcard"; curFid = cards[0].fid; curFnm = "Revision du jour";
   lData = cards.map(function(c) { return c.card; });
   lIdx = 0; lScore = 0; lMissed = [];
   document.getElementById("l-nm").textContent = "Revision du jour";
@@ -2773,8 +3010,26 @@ function launchReviewCards(cards) {
   goScreen("learn"); renderStep();
 }
 
+// Hook renderProfile pour initialiser l'UI IA
+var _origRenderProfile = null;
+if (typeof renderProfile === "function") _origRenderProfile = renderProfile;
+function renderProfile() {
+  if (_origRenderProfile) _origRenderProfile();
+  setTimeout(initAIStatusUI, 100);
+}
+
 init();
 
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js').catch(function(e) {
+      console.log('SW non disponible (normal en APK local):', e);
+    });
+  });
+}
 </script>
 </body>
 </html>
