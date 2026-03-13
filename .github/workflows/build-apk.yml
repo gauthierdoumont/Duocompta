@@ -38,18 +38,39 @@ jobs:
           mkdir -p android/app/src/main/res/xml
           cp network_security_config.xml android/app/src/main/res/xml/network_security_config.xml
 
-      - name: Patch AndroidManifest
-        run: sed -i 's/<application/<application android:networkSecurityConfig="@xml\/network_security_config"/' android/app/src/main/AndroidManifest.xml
+      - name: Patch AndroidManifest - network + cleartext
+        run: |
+          sed -i 's/<application/<application android:networkSecurityConfig="@xml\/network_security_config" android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
+
+      - name: Patch capacitor.config.json - use http scheme
+        run: |
+          cat > capacitor.config.json << 'JSON'
+          {
+            "appId": "be.gauthierdoumont.duocompta",
+            "appName": "DuoCompta",
+            "webDir": "www",
+            "android": {
+              "allowMixedContent": true,
+              "backgroundColor": "#0e0f14",
+              "webContentsDebuggingEnabled": true
+            },
+            "server": {
+              "androidScheme": "http"
+            }
+          }
+          JSON
 
       - name: Sync web assets
         run: npx cap sync android
 
-      - name: Patch MainActivity WebView
+      - name: Patch MainActivity WebView - full config
         run: |
           MAIN=$(find android -name "MainActivity.java" | head -1)
           PACKAGE=$(grep "^package" $MAIN | sed 's/package //;s/;//')
           echo "Package: $PACKAGE"
-          printf 'package %s;\nimport android.os.Bundle;\nimport android.webkit.WebSettings;\nimport android.webkit.WebView;\nimport com.getcapacitor.BridgeActivity;\npublic class MainActivity extends BridgeActivity {\n    @Override\n    public void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        WebView webView = getBridge().getWebView();\n        WebSettings s = webView.getSettings();\n        s.setJavaScriptEnabled(true);\n        s.setDomStorageEnabled(true);\n        s.setAllowFileAccess(true);\n        s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);\n    }\n}\n' "$PACKAGE" > $MAIN
+          printf 'package %s;\nimport android.os.Bundle;\nimport android.webkit.WebSettings;\nimport android.webkit.WebView;\nimport com.getcapacitor.BridgeActivity;\npublic class MainActivity extends BridgeActivity {\n    @Override\n    public void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        WebView.setWebContentsDebuggingEnabled(true);\n        WebView webView = getBridge().getWebView();\n        WebSettings s = webView.getSettings();\n        s.setJavaScriptEnabled(true);\n        s.setDomStorageEnabled(true);\n        s.setAllowFileAccess(true);\n        s.setAllowContentAccess(true);\n        s.setAllowUniversalAccessFromFileURLs(true);\n        s.setAllowFileAccessFromFileURLs(true);\n        s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);\n        s.setCacheMode(WebSettings.LOAD_DEFAULT);\n        s.setMediaPlaybackRequiresUserGesture(false);\n    }\n}\n' "$PACKAGE" > $MAIN
+          echo "=== MainActivity ==="
+          cat $MAIN
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
