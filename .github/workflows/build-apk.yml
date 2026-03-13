@@ -1,0 +1,56 @@
+name: Build DuoCompta APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4.2.2
+
+      - name: Setup Java
+        uses: actions/setup-java@v4.7.0
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Copy index.html to assets
+        run: cp www/index.html app/src/main/assets/index.html
+
+      - name: Generate launcher icons
+        run: python3 generate_icons.py
+
+      - name: Download Gradle wrapper jar
+        run: |
+          mkdir -p gradle/wrapper
+          curl -sL "https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar" \
+            -o gradle/wrapper/gradle-wrapper.jar
+          curl -sL "https://raw.githubusercontent.com/gradle/gradle/v8.4.0/gradlew" -o gradlew
+          chmod +x gradlew
+
+      - name: Build APK
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Show APK info
+        run: |
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          ls -lh $APK
+          echo "APK pret !"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: DuoCompta-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 90
