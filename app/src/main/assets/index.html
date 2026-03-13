@@ -730,6 +730,15 @@ input:checked + .toggle-sl:before { transform:translateX(22px); background:#0e0f
 var _dcBar = document.getElementById('dc-bar');
 var _dcTxt = document.getElementById('dc-txt');
 
+function _dcShowError(msg) {
+  var el = document.getElementById('dc-loading');
+  if (el) el.innerHTML = '<div style="padding:30px;text-align:center">'
+    + '<div style="font-size:40px;margin-bottom:16px">&#9888;</div>'
+    + '<div style="color:#f0c040;font-size:16px;font-weight:bold;margin-bottom:12px">Erreur de chargement</div>'
+    + '<div style="color:#aaa;font-size:13px;word-break:break-all;padding:0 10px">' + msg + '</div>'
+    + '<button onclick="location.reload()" style="margin-top:20px;background:#d4af37;color:#0e0f14;border:none;padding:12px 24px;border-radius:10px;font-size:15px;font-weight:bold">Reessayer</button>'
+    + '</div>';
+}
 function _dcProgress(pct, msg) {
   if (_dcBar) _dcBar.style.width = pct + '%';
   if (_dcTxt) _dcTxt.textContent = msg;
@@ -765,9 +774,16 @@ setTimeout(function() {
 
       setTimeout(function() {
         _dcProgress(100, 'Pret !');
-        setTimeout(_dcHide, 300);
-        if (typeof init === 'function') init();
-        else console.error('init() non trouve');
+        try {
+          if (typeof init === 'function') {
+            init();
+            setTimeout(_dcHide, 500);
+          } else {
+            _dcShowError('init() introuvable');
+          }
+        } catch(e) {
+          _dcShowError('Erreur: ' + e.message + ' (ligne ' + (e.lineNumber||'?') + ')');
+        }
       }, 100);
 
     }, 200);
