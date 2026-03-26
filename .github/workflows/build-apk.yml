@@ -1,53 +1,759 @@
-name: Build DuoCompta APK
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; connect-src *;">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0e0f14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>DuoCompta</title>
+<style>
 
-on:
-  push:
-    branches: [ main, master ]
-  workflow_dispatch:
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+:root{
+  --bg:#0e0f14;--bg2:#13141a;--bg3:#1a1b24;
+  --surf:#1e202c;--surf2:#252838;--surf3:#2d3044;
+  --bdr:rgba(255,255,255,.06);--bdr2:rgba(255,255,255,.11);
+  --gold:#c9a84c;--gold2:#e2c06a;--gold3:#f5dfa0;
+  --green:#3d9970;--green2:#52c98f;
+  --red:#c0392b;--red2:#e74c3c;
+  --blue:#2980b9;--blue2:#3498db;--pk:#9b59b6;
+  --tx:#ecedf5;--tx2:#9395a8;--tx3:#5a5c72;
+  --r:12px;--rs:8px;--nh:64px;--safe:env(safe-area-inset-bottom,0px);
+  --gg:linear-gradient(135deg,var(--gold),#a07828);
+  --gs:0 0 32px rgba(201,168,76,.2);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-family:"DM Sans",sans-serif;}
+::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-thumb{background:var(--surf3);}
+input,select,textarea,button{font-family:inherit;}
+#app{height:100%;display:flex;flex-direction:column;}
+.screen{display:none;flex:1;flex-direction:column;overflow:hidden;}
+.screen.active{display:flex;}
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+/* ONBOARDING */
+#s-start{align-items:center;justify-content:flex-start;overflow-y:auto;
+  padding:24px 16px calc(40px + var(--safe));background:var(--bg);
+  background-image:radial-gradient(ellipse 70% 50% at 15% 25%,rgba(201,168,76,.1),transparent 55%),
+    radial-gradient(ellipse 50% 40% at 85% 75%,rgba(61,153,112,.07),transparent 50%);}
+.ob-lines{position:fixed;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(201,168,76,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(201,168,76,.04) 1px,transparent 1px);
+  background-size:48px 48px;animation:linesDrift 25s linear infinite;}
+@keyframes linesDrift{to{background-position:48px 48px;}}
+.ob-box{position:relative;width:100%;max-width:420px;margin:auto;
+  padding:44px 28px 36px;background:rgba(30,32,44,.95);
+  border:1px solid rgba(201,168,76,.2);border-radius:20px;
+  backdrop-filter:blur(24px);
+  box-shadow:0 40px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(201,168,76,.12);
+  animation:obIn .7s cubic-bezier(.34,1.2,.64,1) both;}
+@keyframes obIn{from{opacity:0;transform:translateY(28px) scale(.97);}to{opacity:1;transform:none;}}
+.ob-logo{font-family:"Cormorant Garamond",serif;font-size:38px;font-weight:700;
+  background:linear-gradient(135deg,var(--gold2),var(--gold3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:2px;}
+.ob-author{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--tx3);margin-bottom:8px;}
+.ob-tagline{font-family:"Cormorant Garamond",serif;font-size:17px;font-style:italic;color:var(--tx2);margin-bottom:28px;}
+.ob-divider{height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.3),transparent);margin-bottom:28px;}
+.flbl{font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:var(--tx3);display:block;margin-bottom:7px;}
+.finp{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--bdr2);border-radius:var(--rs);
+  padding:13px 15px;color:var(--tx);font-size:15px;margin-bottom:16px;outline:none;transition:all .25s;}
+.finp:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,.12);}
+.finp::placeholder{color:var(--tx3);}
+.finp option{background:#1e202c;color:var(--tx);}
+.ob-btn{width:100%;border:none;border-radius:var(--rs);padding:15px;
+  background:var(--gg);color:#0e0f14;font-size:15px;font-weight:600;
+  cursor:pointer;transition:all .2s;box-shadow:var(--gs);}
+.ob-btn:active{transform:scale(.97);opacity:.9;}
+.ob-hint{font-size:11px;color:var(--tx3);margin-top:-10px;margin-bottom:16px;line-height:1.65;}
+.ob-err{background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.3);
+  color:#e88;padding:10px 14px;border-radius:var(--rs);font-size:13px;margin-bottom:16px;display:none;}
+.ob-footer{font-size:11px;color:var(--tx3);text-align:center;
+  margin-top:20px;line-height:1.8;padding-top:16px;border-top:1px solid var(--bdr);}
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+/* APP SHELL */
+#s-app{background:var(--bg);}
+.topbar{height:56px;background:var(--bg2);border-bottom:1px solid var(--bdr);
+  display:flex;align-items:center;padding:0 16px;gap:10px;flex-shrink:0;position:relative;}
+.topbar::after{content:"";position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.25;}
+.tb-brand{font-family:"Cormorant Garamond",serif;font-size:22px;font-weight:700;flex:1;
+  background:linear-gradient(135deg,var(--gold2),var(--gold3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.tb-user{display:flex;align-items:center;gap:8px;cursor:pointer;}
+.tb-nm{font-size:13px;font-weight:500;color:var(--tx2);}
+.tb-ai{font-family:"DM Mono",monospace;font-size:10px;padding:3px 9px;border-radius:20px;
+  background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.25);color:var(--gold2);}
+.content-area{flex:1;overflow:hidden;position:relative;}
+.page{position:absolute;inset:0;overflow-y:auto;display:none;
+  padding:18px 14px calc(var(--nh)+16px+var(--safe));}
+.page.active{display:block;}
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4.2.2
+/* BOTTOM NAV */
+.bnav{height:var(--nh);background:var(--bg2);border-top:1px solid var(--bdr);
+  display:flex;align-items:center;padding-bottom:var(--safe);flex-shrink:0;position:relative;}
+.bnav::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.2;}
+.bni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;cursor:pointer;color:var(--tx3);padding:6px 2px;position:relative;transition:color .2s;}
+.bni.active{color:var(--gold2);}
+.bni.active::after{content:"";position:absolute;top:-1px;left:50%;transform:translateX(-50%);
+  width:24px;height:2px;background:var(--gold);border-radius:0 0 4px 4px;box-shadow:var(--gs);}
+.bni-ic{font-size:19px;transition:transform .2s;}
+.bni.active .bni-ic{transform:translateY(-1px);}
+.bni-lb{font-size:9px;font-weight:500;letter-spacing:.2px;}
 
-      - name: Setup Java
-        uses: actions/setup-java@v4.7.0
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+/* COMMON */
+.pg-title{font-family:"Cormorant Garamond",serif;font-size:26px;font-weight:700;margin-bottom:4px;}
+.pg-sub{font-size:13px;color:var(--tx2);margin-bottom:18px;}
+.sec-ttl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--tx3);
+  margin:20px 0 10px;display:flex;align-items:center;gap:9px;}
+.sec-ttl::after{content:"";flex:1;height:1px;background:var(--bdr);}
+.btn{padding:11px 18px;border-radius:var(--rs);font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .2s;border:none;
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;}
+.btn:active{transform:scale(.96);}
+.btn-gold{background:var(--gg);color:#0e0f14;box-shadow:var(--gs);}
+.btn-green{background:linear-gradient(135deg,var(--green),#2d7a55);color:#fff;}
+.btn-ghost{background:var(--surf2);color:var(--tx2);border:1px solid var(--bdr2);}
+.btn-full{width:100%;}
+.empty-hint{font-size:13px;color:var(--tx3);text-align:center;padding:20px;font-style:italic;}
+.icon-btn{background:none;border:none;cursor:pointer;font-size:16px;color:var(--tx3);padding:4px;transition:color .15s;}
+.icon-btn:active{color:var(--red2);}
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+/* DASHBOARD */
+.dash-hero{background:linear-gradient(135deg,rgba(201,168,76,.12),rgba(61,153,112,.08));
+  border:1px solid rgba(201,168,76,.18);border-radius:var(--r);
+  padding:20px;margin-bottom:16px;position:relative;overflow:hidden;}
+.dash-hero::before{content:"DC";position:absolute;right:-8px;top:-8px;
+  font-family:"Cormorant Garamond",serif;font-size:90px;font-weight:700;
+  color:rgba(201,168,76,.06);pointer-events:none;}
+.dash-greeting{font-family:"Cormorant Garamond",serif;font-size:24px;font-weight:600;
+  line-height:1.2;margin-bottom:4px;}
+.dash-greeting em{color:var(--gold2);font-style:normal;}
+.dash-sub{font-size:13px;color:var(--tx2);}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:2px;}
+.stat{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:14px;position:relative;overflow:hidden;}
+.stat::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--sc,var(--gold));}
+.stat.gr{--sc:var(--green2);}.stat.bl{--sc:var(--blue2);}.stat.rd{--sc:var(--red2);}
+.stat-ic{font-size:17px;margin-bottom:7px;}
+.stat-v{font-family:"Cormorant Garamond",serif;font-size:28px;font-weight:700;line-height:1;}
+.stat-l{font-size:10px;color:var(--tx3);margin-top:3px;text-transform:uppercase;letter-spacing:.7px;}
 
-      - name: Generate launcher icons
-        run: python3 generate_icons.py
+/* MODULE CARDS */
+.mod-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.mcard{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:14px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.mcard::before{content:"";position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:var(--mc,var(--gold));transform:scaleX(0);transition:transform .2s;}
+.mcard:active{border-color:var(--mc,var(--gold));transform:scale(.97);}
+.mcard:active::before{transform:scaleX(1);}
+.mc-ic{font-size:24px;margin-bottom:8px;}
+.mc-nm{font-family:"Cormorant Garamond",serif;font-size:15px;font-weight:700;margin-bottom:2px;}
+.mc-ds{font-size:11px;color:var(--tx3);line-height:1.4;}
 
-      - name: Download Gradle wrapper jar
-        run: |
-          mkdir -p gradle/wrapper
-          curl -sL "https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar" \
-            -o gradle/wrapper/gradle-wrapper.jar
-          curl -sL "https://raw.githubusercontent.com/gradle/gradle/v8.4.0/gradlew" -o gradlew
-          chmod +x gradlew
+/* MODULE LIST */
+.ml{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:14px;cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;gap:12px;margin-bottom:9px;}
+.ml:active{transform:scale(.98);border-color:rgba(201,168,76,.3);}
+.ml-ic{font-size:28px;flex-shrink:0;}
+.ml-nm{font-family:"Cormorant Garamond",serif;font-size:16px;font-weight:700;margin-bottom:2px;}
+.ml-ds{font-size:11px;color:var(--tx3);line-height:1.4;}
+.ml-ar{color:var(--tx3);font-size:18px;margin-left:auto;flex-shrink:0;}
+.fsel{background:var(--surf2);border:1px solid var(--bdr2);border-radius:var(--rs);
+  padding:10px 13px;font-size:14px;color:var(--tx);width:100%;
+  outline:none;margin-bottom:14px;cursor:pointer;transition:border-color .2s;}
+.fsel:focus{border-color:var(--gold);}
+.fsel option{background:#1e202c;}
 
-      - name: Build APK
-        run: ./gradlew assembleDebug --no-daemon
+/* FOLDERS */
+.fcard{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);
+  margin-bottom:10px;position:relative;overflow:hidden;}
+.fcard::before{content:"";position:absolute;top:0;left:0;bottom:0;width:3px;
+  background:linear-gradient(to bottom,var(--gold),var(--green));}
+.fcard-in{padding:14px 14px 14px 17px;}
+.ftop{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;}
+.f-ic{font-size:21px;flex-shrink:0;}
+.f-nm{font-family:"Cormorant Garamond",serif;font-size:16px;font-weight:700;margin-bottom:2px;}
+.f-ds{font-size:12px;color:var(--tx3);line-height:1.4;}
+.f-actions{display:flex;gap:7px;margin-top:10px;}
+.f-btn{padding:6px 12px;border-radius:6px;font-size:12px;font-weight:500;
+  cursor:pointer;border:1px solid var(--bdr2);background:var(--surf2);color:var(--tx2);transition:all .15s;}
+.f-btn:active{border-color:var(--gold);color:var(--gold2);}
+.file-list{margin-top:8px;}
+.file-item{display:flex;align-items:center;gap:10px;background:var(--surf2);
+  border:1px solid var(--bdr);border-radius:var(--rs);padding:9px 12px;margin-bottom:6px;}
+.file-ic{font-size:17px;flex-shrink:0;}
+.file-nm{font-size:13px;font-weight:500;flex:1;}
+.file-meta{font-size:11px;color:var(--tx3);}
+.file-del{font-size:15px;color:var(--tx3);cursor:pointer;padding:4px;flex-shrink:0;transition:color .15s;}
+.file-del:active{color:var(--red2);}
+.fstats{display:flex;gap:7px;flex-wrap:wrap;}
+.fstat{font-size:11px;background:var(--surf2);padding:3px 9px;border-radius:20px;color:var(--tx3);}
+.add-f{border:1.5px dashed var(--bdr2);border-radius:var(--r);padding:20px;
+  text-align:center;cursor:pointer;color:var(--tx3);font-size:13px;font-weight:500;transition:all .2s;}
+.add-f:active{border-color:var(--gold);color:var(--gold2);}
+.srch{width:100%;background:var(--surf);border:1px solid var(--bdr);border-radius:var(--rs);
+  padding:11px 14px;color:var(--tx);font-size:14px;outline:none;transition:all .2s;margin-bottom:12px;}
+.srch:focus{border-color:var(--gold);}
+.srch::placeholder{color:var(--tx3);}
 
-      - name: Show APK info
-        run: |
-          APK=app/build/outputs/apk/debug/app-debug.apk
-          ls -lh $APK
-          echo "APK pret !"
+/* UPLOAD ZONE */
+.upload-zone{border:2px dashed var(--bdr2);border-radius:var(--r);
+  padding:24px 16px;text-align:center;cursor:pointer;transition:all .25s;
+  margin-bottom:12px;position:relative;overflow:hidden;}
+.upload-zone.drag{border-color:var(--gold);background:rgba(201,168,76,.05);}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.uz-ic{font-size:28px;margin-bottom:8px;}
+.uz-txt{font-size:14px;font-weight:500;color:var(--tx);margin-bottom:4px;}
+.uz-sub{font-size:12px;color:var(--tx3);}
+.uz-formats{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-top:8px;}
+.uz-fmt{font-size:10px;padding:2px 7px;border-radius:4px;background:var(--surf3);color:var(--tx3);font-family:"DM Mono",monospace;}
+.prog-bar{height:4px;background:var(--surf3);border-radius:2px;overflow:hidden;margin-bottom:10px;}
+.prog-fill{height:100%;background:var(--gg);border-radius:2px;transition:width .3s ease;}
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4.6.2
-        with:
-          name: DuoCompta-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 90
+/* PROFILE */
+.prof-hero{background:linear-gradient(135deg,rgba(201,168,76,.12),rgba(61,153,112,.08));
+  border:1px solid rgba(201,168,76,.18);border-radius:var(--r);
+  padding:24px;text-align:center;margin-bottom:16px;}
+.prof-av{font-size:48px;margin-bottom:10px;}
+.prof-nm{font-family:"Cormorant Garamond",serif;font-size:24px;font-weight:700;}
+.prof-lv{font-size:13px;color:var(--tx2);margin-top:4px;}
+.prof-ai{margin-top:10px;}
+.srow{display:flex;align-items:center;gap:12px;background:var(--surf);
+  border:1px solid var(--bdr);border-radius:var(--rs);padding:13px;
+  margin-bottom:8px;cursor:pointer;transition:all .2s;}
+.srow:active{background:var(--surf2);border-color:rgba(201,168,76,.2);}
+.s-ic{font-size:18px;flex-shrink:0;}.s-tx{flex:1;}
+.s-lb{font-weight:600;font-size:14px;}.s-sb{font-size:12px;color:var(--tx3);margin-top:1px;}
+.s-ar{color:var(--tx3);font-size:16px;}
+.chip{display:inline-flex;align-items:center;font-size:11px;font-weight:600;
+  padding:3px 10px;border-radius:20px;}
+.chip-g{background:rgba(201,168,76,.12);color:var(--gold2);border:1px solid rgba(201,168,76,.22);}
+
+/* LEARNING ENGINE */
+#s-learn{background:var(--bg);}
+.ltop{display:flex;align-items:center;gap:10px;padding:12px 14px;
+  background:var(--bg2);border-bottom:1px solid var(--bdr);flex-shrink:0;}
+.lback{width:34px;height:34px;border-radius:50%;background:var(--surf2);
+  border:1px solid var(--bdr);color:var(--tx2);font-size:15px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;}
+.lback:active{background:var(--surf3);color:var(--tx);}
+.l-nm{font-family:"Cormorant Garamond",serif;font-size:16px;font-weight:700;flex:1;}
+.l-pw{flex:1;}
+.l-pt{height:4px;background:var(--surf2);border-radius:2px;overflow:hidden;}
+.l-pf{height:100%;border-radius:2px;transition:width .5s ease;background:var(--gg);}
+.l-ct{font-family:"DM Mono",monospace;font-size:10px;color:var(--tx3);margin-top:3px;}
+.l-badge{background:var(--red2);color:#fff;font-family:"DM Mono",monospace;
+  font-size:12px;font-weight:700;padding:4px 10px;border-radius:var(--rs);
+  display:none;align-items:center;flex-shrink:0;}
+.l-badge-warn{background:var(--red2);animation:pulse .8s ease infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.6;}}
+.lcont{flex:1;overflow-y:auto;padding:16px 14px 26px;display:flex;flex-direction:column;}
+.gload{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;}
+.gsp{width:42px;height:42px;border-radius:50%;border:3px solid var(--surf3);
+  border-top-color:var(--gold);animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.g-t{font-family:"Cormorant Garamond",serif;font-size:20px;font-weight:600;}
+.g-s{font-size:13px;color:var(--tx3);}
+.g-dots{display:flex;gap:6px;justify-content:center;}
+.g-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);
+  animation:gdot 1.4s ease infinite;opacity:.3;}
+.g-dot:nth-child(2){animation-delay:.2s;}.g-dot:nth-child(3){animation-delay:.4s;}
+@keyframes gdot{0%,80%,100%{opacity:.3;transform:scale(1);}40%{opacity:1;transform:scale(1.3);}}
+
+/* RESULT */
+.rscreen{flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:24px 16px;text-align:center;gap:12px;}
+.r-medal{font-size:66px;animation:medal .6s cubic-bezier(.34,1.4,.64,1) both;}
+@keyframes medal{from{transform:scale(0) rotate(-10deg);opacity:0;}to{transform:none;opacity:1;}}
+.r-score{font-family:"Cormorant Garamond",serif;font-size:52px;font-weight:700;line-height:1;
+  background:var(--gg);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.r-pct{font-size:14px;color:var(--tx2);}
+.r-msg{font-family:"Cormorant Garamond",serif;font-size:17px;font-style:italic;
+  color:var(--tx2);max-width:260px;line-height:1.65;}
+.r-btns{display:flex;flex-direction:column;gap:8px;width:100%;max-width:280px;margin-top:4px;}
+
+/* FLASHCARDS */
+.fc-wrap{flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:14px 0;perspective:1000px;}
+.fc{width:100%;max-width:340px;height:210px;cursor:pointer;
+  transform-style:preserve-3d;transition:transform .55s ease;position:relative;}
+.fc.flip{transform:rotateY(180deg);}
+.fc-face{position:absolute;inset:0;border-radius:14px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:22px;text-align:center;
+  backface-visibility:hidden;border:1px solid var(--bdr2);}
+.fc-fr{background:linear-gradient(135deg,var(--surf),var(--bg3));box-shadow:0 18px 40px rgba(0,0,0,.4);}
+.fc-bk{transform:rotateY(180deg);
+  background:linear-gradient(135deg,rgba(201,168,76,.12),rgba(61,153,112,.1));
+  border-color:rgba(201,168,76,.25);}
+.fc-lb{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--tx3);
+  margin-bottom:10px;font-family:"DM Mono",monospace;}
+.fc-tx{font-family:"Cormorant Garamond",serif;font-size:18px;font-weight:600;line-height:1.4;}
+.fc-bk .fc-tx{font-size:14px;font-weight:400;font-family:"DM Sans",sans-serif;line-height:1.65;}
+.fc-hint{font-size:11px;color:var(--tx3);margin-top:10px;}
+.fc-dots{display:flex;gap:5px;justify-content:center;padding:8px 0;}
+.fcd{width:6px;height:6px;border-radius:50%;background:var(--surf3);transition:all .3s;}
+.fcd.active{background:var(--gold);transform:scale(1.3);}
+.fcd.done{background:var(--green2);}
+.fc-acts{display:flex;gap:7px;padding:0 14px 12px;justify-content:center;}
+.fc-btn{flex:1;max-width:110px;padding:11px 6px;border-radius:var(--rs);
+  font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .2s;text-align:center;}
+.fc-no{background:rgba(192,57,43,.14);color:var(--red2);border:1px solid rgba(192,57,43,.24);}
+.fc-med{background:rgba(201,168,76,.12);color:var(--gold2);border:1px solid rgba(201,168,76,.22);}
+.fc-yes{background:rgba(61,153,112,.14);color:var(--green2);border:1px solid rgba(61,153,112,.22);}
+.fc-btn:active{transform:scale(.93);}
+.sr-badge{font-size:10px;margin-top:8px;padding:3px 10px;border-radius:20px;font-family:"DM Mono",monospace;}
+.sr-due{background:rgba(192,57,43,.2);color:var(--red2);}
+.sr-ok{background:rgba(61,153,112,.15);color:var(--green2);}
+
+/* QCM */
+.qcard{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:18px;margin-bottom:12px;}
+.q-num{font-family:"DM Mono",monospace;font-size:11px;color:var(--tx3);letter-spacing:1px;margin-bottom:10px;}
+.q-q{font-family:"Cormorant Garamond",serif;font-size:19px;font-weight:600;line-height:1.4;margin-bottom:16px;}
+.q-opts{display:flex;flex-direction:column;gap:8px;}
+.qopt{padding:12px 13px;border:1px solid var(--bdr2);border-radius:var(--rs);
+  cursor:pointer;transition:all .2s;font-size:14px;
+  display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.02);}
+.qopt:active{border-color:var(--gold);}
+.qopt.correct{border-color:var(--green2)!important;background:rgba(61,153,112,.09)!important;color:var(--green2);}
+.qopt.wrong{border-color:var(--red2)!important;background:rgba(192,57,43,.09)!important;color:var(--red2);}
+.opt-l{width:24px;height:24px;border-radius:50%;border:1px solid currentColor;
+  display:flex;align-items:center;justify-content:center;
+  font-family:"DM Mono",monospace;font-size:10px;font-weight:700;flex-shrink:0;opacity:.65;}
+.q-exp{margin-top:10px;padding:10px 13px;background:rgba(201,168,76,.07);
+  border-left:3px solid var(--gold);border-radius:0 var(--rs) var(--rs) 0;
+  font-size:13px;line-height:1.65;color:var(--tx2);display:none;}
+.q-exp.show{display:block;animation:fU .3s ease;}
+@keyframes fU{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+
+/* VRAI/FAUX */
+.vcard{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:22px 16px;margin-bottom:14px;text-align:center;}
+.v-stmt{font-family:"Cormorant Garamond",serif;font-size:19px;font-weight:600;
+  line-height:1.45;margin-bottom:18px;}
+.vf-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.vfb{padding:14px;border-radius:var(--r);border:2px solid var(--bdr2);
+  font-family:"Cormorant Garamond",serif;font-size:20px;font-weight:700;
+  cursor:pointer;transition:all .2s;background:rgba(255,255,255,.02);
+  display:flex;flex-direction:column;align-items:center;gap:4px;}
+.vfb span{font-family:"DM Sans",sans-serif;font-size:10px;font-weight:600;
+  letter-spacing:1px;text-transform:uppercase;}
+.vfb:active{transform:scale(.95);}
+.vfb.correct{border-color:var(--green2)!important;background:rgba(61,153,112,.1)!important;}
+.vfb.wrong{border-color:var(--red2)!important;background:rgba(192,57,43,.1)!important;}
+.v-exp{background:var(--surf2);border-radius:var(--rs);padding:11px 13px;
+  font-size:13px;line-height:1.65;color:var(--tx2);display:none;margin-bottom:10px;}
+.v-exp.show{display:block;animation:fU .3s ease;}
+
+/* FILL */
+.ficard{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:18px;margin-bottom:12px;}
+.fi-q{font-family:"Cormorant Garamond",serif;font-size:18px;font-weight:600;line-height:1.5;margin-bottom:14px;}
+.fi-blank{display:inline-block;min-width:90px;border-bottom:2px solid var(--gold);
+  padding:2px 6px;color:var(--gold2);font-style:italic;}
+.fi-inp{width:100%;background:rgba(255,255,255,.04);border:1.5px solid var(--bdr2);
+  border-radius:var(--rs);padding:11px 13px;color:var(--tx);
+  font-size:16px;outline:none;transition:all .2s;margin-bottom:10px;}
+.fi-inp:focus{border-color:var(--gold);}
+.fi-inp.ok{border-color:var(--green2)!important;background:rgba(61,153,112,.07)!important;}
+.fi-inp.ko{border-color:var(--red2)!important;background:rgba(192,57,43,.07)!important;}
+.fi-ans{font-size:13px;color:var(--tx2);display:none;margin-bottom:8px;}
+.fi-ans.show{display:block;animation:fU .3s ease;}
+
+/* MATCH */
+.match-instr{font-size:13px;color:var(--tx2);margin-bottom:10px;font-style:italic;}
+.match-wrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.mt{background:var(--surf);border:1.5px solid var(--bdr2);border-radius:var(--r);
+  padding:11px;cursor:pointer;transition:all .2s;}
+.mt:active,.mt.sel{border-color:var(--gold);background:rgba(201,168,76,.08);}
+.mt.ok{border-color:var(--green2);background:rgba(61,153,112,.07);pointer-events:none;}
+.mt.ko{border-color:var(--red2);animation:shk .4s ease;}
+@keyframes shk{0%,100%{transform:none;}25%{transform:translateX(-5px);}75%{transform:translateX(5px);}}
+.mt-w{font-family:"Cormorant Garamond",serif;font-size:13px;font-weight:600;}
+.mt-d{font-size:11px;color:var(--tx3);margin-top:3px;display:none;line-height:1.4;}
+.mt.ok .mt-d{display:block;color:var(--green2);}
+
+/* SUMMARY / GLOSSARY */
+.sumc{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:18px;font-size:14px;line-height:1.85;color:var(--tx2);}
+.sumc h1,.sumc h2,.sumc h3{font-family:"Cormorant Garamond",serif;color:var(--tx);margin:14px 0 7px;}
+.sumc h1{font-size:22px;}.sumc h2{font-size:18px;color:var(--gold2);}.sumc h3{font-size:15px;color:var(--green2);}
+.sumc strong{color:var(--tx);font-weight:600;}
+.sumc ul,.sumc ol{margin:5px 0 5px 18px;}.sumc li{margin-bottom:3px;}
+.gloss-item{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--rs);
+  padding:12px 14px;margin-bottom:8px;transition:border-color .2s;}
+.gloss-item:active{border-color:var(--gold);}
+.gloss-term{font-family:"Cormorant Garamond",serif;font-size:16px;font-weight:700;margin-bottom:4px;color:var(--gold2);}
+.gloss-def{font-size:13px;color:var(--tx2);line-height:1.6;}
+
+/* STATS PAGE */
+.goal-card{background:linear-gradient(135deg,rgba(201,168,76,.1),rgba(61,153,112,.07));
+  border:1px solid rgba(201,168,76,.2);border-radius:var(--r);padding:14px;margin-bottom:4px;}
+.goal-top{display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:2px;}
+.chart-wrap{display:flex;align-items:flex-end;gap:5px;height:90px;
+  background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:10px;overflow-x:auto;}
+.bar-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:18px;flex:1;}
+.bar{width:100%;border-radius:3px 3px 0 0;min-height:3px;transition:height .4s ease;}
+.bar-lbl{font-family:"DM Mono",monospace;font-size:9px;color:var(--tx3);}
+.module-stats{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:12px;}
+.stat-row{display:flex;align-items:center;gap:8px;padding:7px 0;
+  border-bottom:1px solid var(--bdr);}
+.stat-row:last-child{border-bottom:none;}
+.sr-ic{font-size:16px;flex-shrink:0;}
+.sr-nm{font-size:13px;font-weight:500;flex:0 0 80px;}
+.sr-cnt{font-size:11px;color:var(--tx3);flex:0 0 70px;font-family:"DM Mono",monospace;}
+.sr-bar{flex:1;height:5px;background:var(--surf3);border-radius:3px;overflow:hidden;}
+.sr-fill{height:100%;border-radius:3px;transition:width .5s ease;}
+.sr-pct{font-family:"DM Mono",monospace;font-size:11px;color:var(--tx2);flex:0 0 36px;text-align:right;}
+.badges-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;}
+.badge{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:12px 8px;text-align:center;transition:all .2s;}
+.badge-on{border-color:rgba(201,168,76,.35);background:rgba(201,168,76,.06);}
+.badge-off{opacity:.4;}
+.badge-ic{font-size:22px;margin-bottom:5px;}
+.badge-lb{font-size:10px;color:var(--tx3);line-height:1.3;}
+.badge-on .badge-lb{color:var(--gold2);}
+
+/* POMODORO */
+.pom-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:20px;text-align:center;}
+.pom-state{font-size:13px;font-weight:600;color:var(--tx2);margin-bottom:16px;letter-spacing:.5px;}
+.pom-ring{position:relative;width:160px;height:160px;margin:0 auto 14px;}
+.pom-ring svg{width:100%;height:100%;}
+.pom-time{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:"DM Mono",monospace;font-size:28px;font-weight:500;color:var(--tx);}
+.pom-cycles{font-size:12px;color:var(--tx3);margin-bottom:14px;}
+.pom-btns{display:flex;gap:9px;justify-content:center;margin-bottom:18px;}
+.pom-settings{border-top:1px solid var(--bdr);padding-top:14px;text-align:left;}
+
+/* MODAL */
+.mov{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;
+  display:flex;align-items:flex-end;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .25s;backdrop-filter:blur(10px);}
+.mov.open{opacity:1;pointer-events:all;}
+.mbox{background:var(--bg2);border:1px solid var(--bdr2);border-radius:18px 18px 0 0;
+  width:100%;max-width:520px;padding:20px 16px calc(20px + var(--safe));
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.34,1.1,.64,1);
+  max-height:90vh;overflow-y:auto;}
+.mov.open .mbox{transform:translateY(0);}
+.mhandle{width:32px;height:4px;background:var(--surf3);border-radius:2px;margin:0 auto 16px;}
+.m-t{font-family:"Cormorant Garamond",serif;font-size:20px;font-weight:700;margin-bottom:4px;}
+.m-s{font-size:13px;color:var(--tx3);margin-bottom:18px;}
+.m-lb{font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:var(--tx3);display:block;margin-bottom:7px;}
+.m-in{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--bdr2);
+  border-radius:var(--rs);padding:11px 13px;color:var(--tx);
+  font-size:14px;outline:none;transition:all .2s;margin-bottom:13px;}
+.m-in:focus{border-color:var(--gold);}
+.m-in option{background:#1e202c;}
+.ic-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:13px;}
+.ico{font-size:20px;padding:7px;border:1px solid var(--bdr);border-radius:var(--rs);cursor:pointer;transition:all .15s;}
+.ico.sel{border-color:var(--gold);background:rgba(201,168,76,.15);transform:scale(1.1);}
+
+/* NOTIF */
+.notif{position:fixed;bottom:calc(var(--nh)+12px);left:50%;
+  transform:translateX(-50%) translateY(14px);opacity:0;
+  background:var(--surf2);color:var(--tx);padding:10px 16px;border-radius:var(--rs);
+  font-size:13px;font-weight:500;z-index:999;transition:all .3s;
+  white-space:nowrap;border-left:3px solid var(--gold);
+  box-shadow:0 8px 28px rgba(0,0,0,.5);max-width:90vw;text-align:center;}
+.notif.show{transform:translateX(-50%) translateY(0);opacity:1;}
+.notif.ok{border-left-color:var(--green2);}.notif.err{border-left-color:var(--red2);}
+.ibanner{display:none;padding:10px 14px;background:var(--gg);
+  color:#0e0f14;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:600;flex-shrink:0;}
+.ibanner.show{display:flex;}
+.ib-x{margin-left:auto;font-size:16px;opacity:.7;padding:3px;}
+
+/* Toggle switch */
+.toggle-sw { position:relative; display:inline-block; width:48px; height:26px; }
+.toggle-sw input { opacity:0; width:0; height:0; }
+.toggle-sl { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0;
+  background:var(--bg2); border-radius:26px; transition:.3s; border:1px solid var(--bdr); }
+.toggle-sl:before { position:absolute; content:""; height:18px; width:18px; left:3px; bottom:3px;
+  background:var(--tx3); border-radius:50%; transition:.3s; }
+input:checked + .toggle-sl { background:var(--gold); border-color:var(--gold); }
+input:checked + .toggle-sl:before { transform:translateX(22px); background:#0e0f14; }
+/* Section titles in profile */
+.p-section-title { font-size:11px; font-weight:700; color:var(--tx3); text-transform:uppercase;
+  letter-spacing:.08em; margin:18px 0 8px; padding-left:2px; }
+
+#dc-load{position:fixed;inset:0;background:#0e0f14;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;z-index:99999;transition:opacity .5s;}
+#dc-load.hide{opacity:0;pointer-events:none;}
+#dc-bar-wrap{width:200px;height:4px;background:#1a1b25;border-radius:2px;margin-top:20px;}
+#dc-bar{height:4px;background:#c9a84c;border-radius:2px;width:0%;transition:width .4s;}
+#dc-txt{font-size:12px;color:#555;margin-top:10px;}
+#dc-err{display:none;font-size:13px;padding:20px;text-align:center;max-width:300px;word-break:break-all;}
+.dc-retry{margin-top:16px;background:#c9a84c;color:#0e0f14;border:none;padding:12px 24px;border-radius:10px;font-size:15px;font-weight:bold;cursor:pointer;}
+</style>
+</head>
+<body>
+<div id="dc-load">
+  <div style="font-size:48px;margin-bottom:12px">&#127979;</div>
+  <div style="font-size:20px;font-weight:700;color:#c9a84c;font-family:serif">DuoCompta</div>
+  <div id="dc-bar-wrap"><div id="dc-bar"></div></div>
+  <div id="dc-txt">Chargement...</div>
+  <div id="dc-err"></div>
+</div>
+
+<div id="app">
+<div class="ibanner" id="ibanner" onclick="installPWA()">
+  <span>&#128242;</span><span>Installer DuoCompta sur cet appareil</span>
+  <span class="ib-x" onclick="event.stopPropagation();this.parentNode.classList.remove('show')">&#10005;</span>
+</div>
+
+<!-- ONBOARDING -->
+<div class="screen active" id="s-start">
+  <div class="ob-lines"></div>
+  <div class="ob-box">
+    <div class="ob-logo">DuoCompta</div>
+    <div class="ob-author">par Gauthier Doumont</div>
+    <div class="ob-tagline">Votre plateforme d&#39;etude intelligente</div>
+    <div class="ob-divider"></div>
+    <div class="ob-err" id="ob-err"></div>
+    <label class="flbl">Votre prenom</label>
+    <input class="finp" id="inp-name" placeholder="ex : Alice" autocomplete="name">
+    <label class="flbl">Niveau / Filiere</label>
+    <input class="finp" id="inp-level" placeholder="ex : L3 Comptabilite">
+    <label class="flbl">IA preferee</label>
+    <select class="finp" id="inp-ai" onchange="updHelp()">
+      <option value="groq">Groq &#8212; Llama 3.3 (Gratuit)</option>
+      <option value="claude">Claude &#8212; Anthropic</option>
+      <option value="openai">ChatGPT &#8212; OpenAI</option>
+      <option value="deepseek">DeepSeek &#8212; DeepSeek AI</option>
+      <option value="gemini">Gemini &#8212; Google</option>
+    </select>
+    <label class="flbl" id="api-lbl">Cle API Claude</label>
+    <input class="finp" id="inp-key" placeholder="sk-ant-..." autocomplete="off" type="password">
+    <div class="ob-hint" id="api-hint">Gratuit : console.anthropic.com &gt; API Keys &gt; Create Key</div>
+    <button class="ob-btn" onclick="doStart()">Commencer &#8594;</button>
+    <div class="ob-footer">
+      &#128274; Donnees uniquement sur cet appareil &#8226; Aucun compte requis<br>
+      <span style="opacity:.6">&#169; DuoCompta &#8212; Gauthier Doumont</span>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="screen" id="s-app">
+  <div class="topbar">
+    <div class="tb-brand">DuoCompta</div>
+    <div class="tb-user" onclick="showPage('profile')">
+      <div class="tb-nm" id="tb-nm">&#8212;</div>
+      <div class="tb-ai" id="tb-ai">&#8212;</div>
+    </div>
+  </div>
+  <div class="content-area">
+
+    <!-- HOME -->
+    <div class="page active" id="page-home">
+      <div class="dash-hero">
+        <div class="dash-greeting" id="greeting">Bonjour, <em>&#8212;</em></div>
+        <div class="dash-sub">Que voulez-vous reviser aujourd&#39;hui ?</div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat"><div class="stat-ic">&#128193;</div><div class="stat-v" id="st-f">0</div><div class="stat-l">Dossiers</div></div>
+        <div class="stat gr"><div class="stat-ic">&#127919;</div><div class="stat-v" id="st-sc">&#8212;</div><div class="stat-l">Score moy.</div></div>
+        <div class="stat bl"><div class="stat-ic">&#129504;</div><div class="stat-v" id="st-se">0</div><div class="stat-l">Sessions</div></div>
+        <div class="stat rd"><div class="stat-ic">&#128293;</div><div class="stat-v" id="st-st">0j</div><div class="stat-l">Streak</div></div>
+      </div>
+      <div class="sec-ttl">Modules</div>
+      <div class="mod-grid">
+        <div class="mcard" style="--mc:var(--gold)"   onclick="goLearn('flashcard')"><div class="mc-ic">&#127183;</div><div class="mc-nm">Flashcards</div><div class="mc-ds">Repetition espacee (SR)</div></div>
+        <div class="mcard" style="--mc:var(--green)"  onclick="goLearn('qcm')"><div class="mc-ic">&#127919;</div><div class="mc-nm">QCM</div><div class="mc-ds">4 choix + explications</div></div>
+        <div class="mcard" style="--mc:var(--blue2)"  onclick="goLearn('vf')"><div class="mc-ic">&#9889;</div><div class="mc-nm">Vrai / Faux</div><div class="mc-ds">Valide les affirmations</div></div>
+        <div class="mcard" style="--mc:var(--red2)"   onclick="goLearn('fill')"><div class="mc-ic">&#9999;</div><div class="mc-nm">Completer</div><div class="mc-ds">Phrases a trous</div></div>
+        <div class="mcard" style="--mc:var(--gold)"   onclick="goLearn('match')"><div class="mc-ic">&#128279;</div><div class="mc-nm">Associations</div><div class="mc-ds">Termes et definitions</div></div>
+        <div class="mcard" style="--mc:var(--pk)"     onclick="goLearn('exam')"><div class="mc-ic">&#127891;</div><div class="mc-nm">Examen</div><div class="mc-ds">Chrono + 15 questions</div></div>
+        <div class="mcard" style="--mc:var(--green)"  onclick="goLearn('summary')"><div class="mc-ic">&#128221;</div><div class="mc-nm">Synthese</div><div class="mc-ds">Resume intelligent</div></div>
+        <div class="mcard" style="--mc:var(--blue2)"  onclick="goLearn('glossary')"><div class="mc-ic">&#128218;</div><div class="mc-nm">Glossaire</div><div class="mc-ds">Tous les termes cles</div></div>
+      </div>
+      <div class="sec-ttl">Dossiers recents</div>
+      <div id="dash-fl"></div>
+    </div>
+
+    <!-- MODULES -->
+    <div class="page" id="page-modules">
+      <div class="pg-title">Modules</div>
+      <div class="pg-sub">Choisissez votre mode d&#39;apprentissage</div>
+      <label class="flbl" style="margin-bottom:7px">Dossier source</label>
+      <select class="fsel" id="mfsel"></select>
+      <div class="ml" onclick="goLearnFrom('flashcard')"><div class="ml-ic">&#127183;</div><div><div class="ml-nm">Flashcards</div><div class="ml-ds">Repetition espacee &#8212; les cartes ratees reviennent plus souvent</div></div><div class="ml-ar">&#8250;</div></div>
+      <div class="ml" onclick="goLearnFrom('qcm')"><div class="ml-ic">&#127919;</div><div><div class="ml-nm">QCM</div><div class="ml-ds">8 questions a 4 choix avec explications detaillees</div></div><div class="ml-ar">&#8250;</div></div>
+      <div class="ml" onclick="goLearnFrom('vf')"><div class="ml-ic">&#9889;</div><div><div class="ml-nm">Vrai / Faux</div><div class="ml-ds">10 affirmations a valider rapidement</div></div><div class="ml-ar">&#8250;</div></div>
+      <div class="ml" onclick="goLearnFrom('fill')"><div class="ml-ic">&#9999;</div><div><div class="ml-nm">Completer les blancs</div><div class="ml-ds">Phrases a trous tirees de votre cours</div></div><div class="ml-ar">&#8250;</div></div>
+      <div class="ml" onclick="goLearnFrom('match')"><div class="ml-ic">&#128279;</div><div><div class="ml-nm">Associations</div><div class="ml-ds">Reliez chaque terme a sa definition</div></div><div class="ml-ar">&#8250;</div></div>
+      <div class="ml" onclick="goLearnFrom('exam')"><div class="ml-ic">&#127891;</div><div><div class="ml-nm">Mode Examen</div><div class="ml-ds">15 questions chrono &#8212; simulation de partiel</div></div><div class="ml-ar">&#8250;</div></div>
+      <div class="ml" onclick="goLearnFrom('summary')"><div class="ml-ic">&#128221;</div><div><div class="ml-nm">Synthese IA</div><div class="ml-ds">Resume structure genere par l&#39;IA</div></div><div class="ml-ar">&#8250;</div></div>
+      <div class="ml" onclick="goLearnFrom('glossary')"><div class="ml-ic">&#128218;</div><div><div class="ml-nm">Glossaire</div><div class="ml-ds">Tous les termes importants avec definitions</div></div><div class="ml-ar">&#8250;</div></div>
+    </div>
+
+    <!-- DOSSIERS -->
+    <div class="page" id="page-folders">
+      <div class="pg-title">Dossiers</div>
+      <div class="pg-sub">Organisez vos cours par matiere</div>
+      <input type="search" class="srch" placeholder="Rechercher..." oninput="filterF(this.value)">
+      <div id="flist"></div>
+      <div class="add-f" onclick="openFolderModal()">+ Nouveau dossier</div>
+    </div>
+
+    <!-- STATS -->
+    <div class="page" id="page-stats">
+      <div class="pg-title">Statistiques</div>
+      <div class="pg-sub">Chargement...</div>
+    </div>
+
+    <!-- POMODORO -->
+    <div class="page" id="page-pomodoro">
+      <div class="pg-title">Pomodoro</div>
+      <div class="pg-sub">Chargement...</div>
+    </div>
+
+    <!-- PROFIL -->
+    <div class="page" id="page-review">
+      <div class="pg-title">R&#233;visions du jour</div>
+      <div id="review-content"><div style="text-align:center;padding:40px 20px;color:var(--tx3)">Chargement...</div></div>
+    </div>
+
+    <div class="page" id="page-profile">
+      <div class="pg-title">Profil</div>
+      <div class="prof-hero">
+        <div class="prof-av">&#127891;</div>
+        <div class="prof-nm" id="p-nm">&#8212;</div>
+        <div class="prof-lv" id="p-lv">&#8212;</div>
+        <div class="prof-ai"><span class="chip chip-g" id="p-ai">&#8212;</span></div>
+      </div>
+      <button class="btn btn-gold btn-full" style="margin-bottom:14px;font-size:15px;padding:15px" onclick="clearAndReset()">
+        &#128273; Changer la cle API / fournisseur IA
+      </button>
+
+      <div class="srow" onclick="openAC('')"><div class="s-ic">&#128196;</div><div class="s-tx"><div class="s-lb">Ajouter un cours</div><div class="s-sb">Importer PDF, Word, PowerPoint, Excel ou coller du texte</div></div><div class="s-ar">&#8250;</div></div>
+      <div class="srow" onclick="showPage('modules')"><div class="s-ic">&#127918;</div><div class="s-tx"><div class="s-lb">Lancer un module</div><div class="s-sb">Choisir un mode d&#39;apprentissage</div></div><div class="s-ar">&#8250;</div></div>
+      <div class="srow" onclick="showPage('stats')"><div class="s-ic">&#128202;</div><div class="s-tx"><div class="s-lb">Statistiques detaillees</div><div class="s-sb">Graphique, badges, objectifs</div></div><div class="s-ar">&#8250;</div></div>
+      <!-- IA LOCALE -->
+      <div class="p-section-title">&#129504; Intelligence Artificielle</div>
+      <div id="ai-mode-card" style="background:var(--card);border-radius:14px;padding:16px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div>
+            <div style="font-weight:700;color:var(--tx1)">IA Locale (Phi-3 Mini)</div>
+            <div style="font-size:12px;color:var(--tx3)">Sans internet &#8212; t&#233;l&#233;chargement unique 2.3 GB</div>
+          </div>
+          <label class="toggle-sw">
+            <input type="checkbox" id="local-ai-toggle" onchange="toggleLocalAI(this.checked)">
+            <span class="toggle-sl"></span>
+          </label>
+        </div>
+        <div id="local-ai-status" style="font-size:12px;color:var(--tx3);margin-bottom:10px">
+          V&#233;rification WebGPU...
+        </div>
+        <div id="local-ai-progress" style="display:none">
+          <div style="background:var(--bg2);border-radius:6px;height:6px;margin-bottom:6px">
+            <div id="local-ai-bar" style="background:var(--gold);height:6px;border-radius:6px;width:0%;transition:width 0.3s"></div>
+          </div>
+          <div id="local-ai-msg" style="font-size:11px;color:var(--tx3)">Chargement...</div>
+        </div>
+      </div>
+
+      <!-- INFOS COMPLEMENTAIRES -->
+      <div class="p-section-title">&#128203; Infos compl&#233;mentaires pour l&#39;IA</div>
+      <div style="background:var(--card);border-radius:14px;padding:16px;margin-bottom:10px">
+        <div style="font-size:13px;color:var(--tx2);margin-bottom:10px;line-height:1.5">
+          Donnez des informations &#224; l&#39;IA pour qu&#39;elle adapte son contenu &#224; votre situation :
+          niveau, points faibles, exam&#233;n &#224; venir, etc.
+        </div>
+        <textarea id="extra-info-ta" placeholder="Ex: Je suis en L2 comptabilit&#233;. Mon exam est dans 3 semaines. Je confonds souvent d&#233;bit et cr&#233;dit. Je veux des exercices pratiques plut&#244;t que th&#233;oriques..."
+          style="width:100%;min-height:100px;background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;padding:12px;color:var(--tx1);font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit"
+          onchange="saveExtraInfo(this.value)" oninput="saveExtraInfo(this.value)"></textarea>
+        <div style="font-size:11px;color:var(--tx3);margin-top:6px">Sauvegardes automatiquement &#8212; pris en compte dans toutes les g&#233;n&#233;rations IA</div>
+      </div>
+
+      <!-- EXPORT/IMPORT -->
+      <div class="p-section-title">&#128190; Donn&#233;es</div>
+      <div class="srow" onclick="exportData()"><div class="s-ic">&#128190;</div><div class="s-tx"><div class="s-lb">Exporter mes donn&#233;es</div><div class="s-sb">Sauvegarde compl&#232;te : cours, stats, cache IA, r&#233;p&#233;tition espac&#233;e</div></div><div class="s-ar">&#8250;</div></div>
+      <div class="srow" onclick="importData()"><div class="s-ic">&#128229;</div><div class="s-tx"><div class="s-lb">Importer une sauvegarde</div><div class="s-sb">Restaurer depuis un fichier .json</div></div><div class="s-ar">&#8250;</div></div>
+      <div class="srow" onclick="clearAndReset()"><div class="s-ic">&#128260;</div><div class="s-tx"><div class="s-lb">Modifier le profil</div><div class="s-sb">Changer nom, niveau ou cle API</div></div><div class="s-ar">&#8250;</div></div>
+      <div style="text-align:center;margin-top:22px;padding-top:14px;border-top:1px solid var(--bdr)">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--gold2)">DuoCompta</div>
+        <div style="font-size:12px;color:var(--tx3);margin-top:4px">Developpe par <strong style="color:var(--tx2)">Gauthier Doumont</strong></div>
+        <div style="font-size:10px;color:var(--tx3);margin-top:2px;letter-spacing:.5px">TOUS DROITS RESERVES</div>
+      </div>
+    </div>
+
+  </div>
+  <nav class="bnav">
+    <div class="bni active" onclick="showPage('home',this)"><div class="bni-ic">&#127968;</div><div class="bni-lb">Accueil</div></div>
+    <div class="bni" onclick="showPage('modules',this)"><div class="bni-ic">&#127918;</div><div class="bni-lb">Modules</div></div>
+    <div class="bni" onclick="showPage('folders',this)"><div class="bni-ic">&#128193;</div><div class="bni-lb">Dossiers</div></div>
+    <div class="bni" onclick="showPage('stats',this);renderStats()"><div class="bni-ic">&#128202;</div><div class="bni-lb">Stats</div></div>
+    <div class="bni" onclick="showPage('review',this);renderReview()"><div class="bni-ic">&#128197;</div><div class="bni-lb">R&#233;visions</div></div>
+    <div class="bni" onclick="showPage('profile',this);renderProfile()"><div class="bni-ic">&#128100;</div><div class="bni-lb">Profil</div></div>
+  </nav>
+</div>
+
+<!-- LEARNING ENGINE -->
+<div class="screen" id="s-learn">
+  <div class="ltop">
+    <button class="lback" onclick="exitLearn()">&#8592;</button>
+    <div class="l-nm" id="l-nm">&#8212;</div>
+    <div class="l-pw">
+      <div class="l-pt"><div class="l-pf" id="l-pf" style="width:0%"></div></div>
+      <div class="l-ct" id="l-ct">0/0</div>
+    </div>
+    <div class="l-badge" id="l-badge">00:00</div>
+  </div>
+  <div class="lcont" id="lcont">
+    <div class="gload">
+      <div class="gsp"></div>
+      <div class="g-t">Generation en cours</div>
+      <div class="g-s">Analyse de votre cours...</div>
+      <div class="g-dots"><div class="g-dot"></div><div class="g-dot"></div><div class="g-dot"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="mov" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="mbox"><div class="mhandle"></div><div id="mc"></div></div>
+</div>
+<div class="notif" id="notif"></div>
+
+<script>
+var _bar=document.getElementById('dc-bar');
+var _txt=document.getElementById('dc-txt');
+function _prog(p,m){if(_bar)_bar.style.width=p+'%';if(_txt)_txt.textContent=m;}
+function _showErr(msg){
+  var e=document.getElementById('dc-err');
+  if(e){e.style.display='block';
+    e.innerHTML='<div style="font-size:32px">&#9888;</div><div style="color:#f0c040;font-weight:bold;margin:8px 0">Erreur</div>'
+    +'<div style="color:#aaa">'+msg+'</div><button class="dc-retry" onclick="location.reload()">Reessayer</button>';}
+  if(_bar)_bar.parentNode.style.display='none';
+  if(_txt)_txt.style.display='none';
+}
+function _hide(){var e=document.getElementById('dc-load');if(e){e.classList.add('hide');setTimeout(function(){e.remove();},600);}}
+function _run(code,lbl){
+  try{var s=document.createElement('script');s.textContent=code;document.head.appendChild(s);return true;}
+  catch(e){_showErr(lbl+': '+e.message);return false;}
+}
+_prog(10,'Demarrage...');
+setTimeout(function(){
+  _prog(30,'Chargement 1/3...');
+  if(!_run("function updHelp() {\n  var ai=document.getElementById('inp-ai');\n  var lbl=document.getElementById('api-lbl');\n  var hint=document.getElementById('api-hint');\n  var keyInp=document.getElementById('inp-key');\n  if(!ai)return;\n  var v=ai.value;\n  var info={\n    groq:     {lbl:'Cle API Groq (gratuit)',   hint:'Gratuit : console.groq.com > API Keys',          ph:'gsk_...'},\n    claude:   {lbl:'Cle API Claude',            hint:'console.anthropic.com > API Keys',               ph:'sk-ant-...'},\n    openai:   {lbl:'Cle API OpenAI',            hint:'platform.openai.com > API Keys',                 ph:'sk-...'},\n    gemini:   {lbl:'Cle API Gemini (gratuit)',  hint:'Gratuit : aistudio.google.com > Get API key',    ph:'AIza...'},\n    deepseek: {lbl:'Cle API DeepSeek',          hint:'Gratuit : platform.deepseek.com > API Keys',     ph:'sk-...'}\n  };\n  var d=info[v]||info.groq;\n  if(lbl)lbl.textContent=d.lbl;\n  if(hint)hint.textContent=d.hint;\n  if(keyInp)keyInp.placeholder=d.ph;\n}\nvar DB = {\n  get: function(k) {\n    try { return JSON.parse(localStorage.getItem(k)); } catch(e) { return null; }\n  },\n  set: function(k, v) {\n    try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e) { return false; }\n  },\n  del: function(k) {\n    try { localStorage.removeItem(k); } catch(e) {}\n  },\n  keys: function(prefix) {\n\n    try {\n      var ks = [];\n      for (var i = 0; i < localStorage.length; i++) {\n        var k = localStorage.key(i);\n        if (k && k.indexOf(prefix) === 0) ks.push(k);\n      }\n      return ks;\n    } catch(e) { return []; }\n  }\n};\n\nfunction gF(uid)    { return DB.get(\"dc_f_\" + uid) || []; }\nfunction sF(uid, f) { DB.set(\"dc_f_\" + uid, f); }\n\nfunction gSt(uid) {\n  return DB.get(\"dc_st_\" + uid) || {\n    sessions: 0,\n    scores: [],\n    streak: 0,\n    lastDay: null,\n    badges: [],\n    pomodoroTotal: 0,\n    goals: { dailyMin: 20 }\n  };\n}\nfunction sSt(uid, s) { DB.set(\"dc_st_\" + uid, s); }\n\nfunction gSR(uid, fid) {\n  return DB.get(\"dc_sr_\" + uid + \"_\" + fid) || {};\n}\nfunction sSR(uid, fid, data) { DB.set(\"dc_sr_\" + uid + \"_\" + fid, data); }\nfunction gCache(uid, fid, type) {\n  return DB.get(\"dc_cache_\" + uid + \"_\" + fid + \"_\" + type) || null;\n}\nfunction sCache(uid, fid, type, data) {\n  DB.set(\"dc_cache_\" + uid + \"_\" + fid + \"_\" + type, {\n    data: data,\n    date: new Date().toISOString(),\n    fid: fid,\n    type: type\n  });\n}\nfunction delCache(uid, fid, type) {\n  DB.del(\"dc_cache_\" + uid + \"_\" + fid + \"_\" + type);\n}\nfunction delAllCache(uid, fid) {\n  var types = [\"flashcard\",\"qcm\",\"vf\",\"fill\",\"match\",\"exam\",\"summary\",\"glossary\"];\n  for (var i = 0; i < types.length; i++) delCache(uid, fid, types[i]);\n}\n\nvar CU       = null;   // current user\nvar lType    = \"\";     // active module type\nvar lData    = [];     // active module data\nvar lIdx     = 0;      // current question index\nvar lScore   = 0;      // current session score\nvar lMissed  = [];     // items answered wrong (for retry)\nvar curFid   = \"\";     // current folder id\nvar curFnm   = \"\";     // current folder name\n\nfunction dateKey() {\n  var d = new Date();\n  return d.getFullYear() + \"-\" + String(d.getMonth()+1).padStart(2,\"0\") + \"-\" + String(d.getDate()).padStart(2,\"0\");\n}\nfunction fmtDate(iso) {\n  if (!iso) return \"\";\n  var d = new Date(iso);\n  return d.getDate() + \"/\" + (d.getMonth()+1) + \"/\" + d.getFullYear();\n}\n\nfunction uid6()    { return Math.random().toString(36).slice(2,8); }\nfunction esc(s)    { return String(s||\"\").replace(/&/g,\"&amp;\").replace(/</g,\"&lt;\").replace(/>/g,\"&gt;\").replace(/\"/g,\"&quot;\"); }\nfunction notify(msg, err) {\n  var n = document.getElementById(\"notif\");\n  if (!n) return;\n  n.textContent = msg;\n  n.className = \"notif\" + (err ? \" notif-err\" : \" notif-ok\") + \" show\";\n  setTimeout(function() { n.className = \"notif\"; }, 2800);\n}\n\nfunction goScreen(id) {\n  var screens = document.querySelectorAll(\".screen\");\n  for (var i = 0; i < screens.length; i++) {\n    screens[i].classList.toggle(\"active\", screens[i].id === \"sc-\" + id);\n  }\n}\n\nfunction updateStreak() {\n  var st  = gSt(CU.id);\n  var now = dateKey();\n  if (st.lastDay === now) return;\n  var yesterday = new Date(Date.now() - 86400000);\n  var yk = yesterday.getFullYear() + \"-\" + String(yesterday.getMonth()+1).padStart(2,\"0\") + \"-\" + String(yesterday.getDate()).padStart(2,\"0\");\n  st.streak  = (st.lastDay === yk) ? (st.streak || 0) + 1 : 1;\n  st.lastDay = now;\n  sSt(CU.id, st);\n}\nfunction doStart() {\n  var name  = document.getElementById(\"inp-name\").value.trim();\n  var level = document.getElementById(\"inp-level\").value;\n  var ai    = document.getElementById(\"inp-ai\").value;\n  var key   = document.getElementById(\"inp-key\").value.trim();\n  if (!name) { notify(\"Entrez votre prenom\", true); return; }\n  if (!key)  { notify(\"Entrez votre cle API\", true); return; }\n  var uid  = uid6();\n  var prev = DB.get(\"dc_current\");\n  if (prev) uid = prev.id || uid;\n  CU = { id: uid, name: name, level: level, ai: ai, apiKey: key };\n  DB.set(\"dc_current\", CU);\n  _modelCache = {};\n  goScreen(\"app\");\n  renderDash();\n  updateStreak();\n}\n\nfunction clearAndReset() {\n  var saved = DB.get(\"dc_current\");\n  if (saved) {\n    document.getElementById(\"inp-name\").value  = saved.name  || \"\";\n    document.getElementById(\"inp-level\").value = saved.level || \"L1\";\n    document.getElementById(\"inp-ai\").value    = saved.ai    || \"groq\";\n    document.getElementById(\"inp-key\").value   = saved.apiKey || \"\";\n    updHelp();\n  }\n  goScreen(\"onboard\");\n}\n\nfunction init() {\n  try {\n    loadExtraInfo();\n    loadAIMode();\n    var saved = DB.get(\"dc_current\");\n    if (saved && saved.name) {\n      CU = saved;\n      document.getElementById(\"s-start\").classList.remove(\"active\");\n      document.getElementById(\"s-app\").classList.add(\"active\");\n      renderDash();\n      renderF();\n      rfModSel();\n      updateStreak();\n      setTimeout(function(){ try{initAIStatusUI();}catch(e){} }, 500);\n    } else {\n      document.getElementById(\"s-start\").classList.add(\"active\");\n      try{updHelp();}catch(e){}\n    }\n  } catch(e) { alert(\"Erreur init: \"+e.message); }\n}\n\nfunction renderProfile() {\n  if (!CU) return;\n  var nm = document.getElementById(\"p-nm\");\n  var lv = document.getElementById(\"p-lv\");\n  var ai = document.getElementById(\"p-ai\");\n  if (nm) nm.textContent = CU.name;\n  if (lv) lv.textContent = CU.level || \"Non renseigne\";\n  if (ai) ai.textContent = AN[CU.ai] || CU.ai;\n}\n\nfunction exportData() {\n  if (!CU) return;\n\n  var cacheKeys = DB.keys(\"dc_cache_\" + CU.id);\n  var cache = {};\n  for (var i = 0; i < cacheKeys.length; i++) {\n    cache[cacheKeys[i]] = DB.get(cacheKeys[i]);\n  }\n\n  var srKeys = DB.keys(\"dc_sr_\" + CU.id);\n  var sr = {};\n  for (var i = 0; i < srKeys.length; i++) {\n    sr[srKeys[i]] = DB.get(srKeys[i]);\n  }\n\n  var data = {\n    version:    2,\n    exportDate: new Date().toISOString(),\n    profile:    { name: CU.name, level: CU.level, ai: CU.ai },\n    folders:    gF(CU.id),\n    stats:      gSt(CU.id),\n    cache:      cache,\n    sr:         sr\n  };\n\n  var json = JSON.stringify(data, null, 2);\n  var blob = new Blob([json], { type: \"application/json\" });\n  var a    = document.createElement(\"a\");\n  a.href   = URL.createObjectURL(blob);\n  a.download = \"duocompta-\" + CU.name.replace(/\\s+/g,\"-\") + \"-\" + dateKey() + \".json\";\n  a.click();\n  notify(\"Sauvegarde complete telechargee \\u2713\", false);\n}\n\nfunction importData() {\n  var input = document.createElement(\"input\");\n  input.type   = \"file\";\n  input.accept = \".json\";\n  input.onchange = function(e) {\n    var file = e.target.files[0];\n    if (!file) return;\n    var reader = new FileReader();\n    reader.onload = function(ev) {\n      try {\n        var data = JSON.parse(ev.target.result);\n        if (!data.profile || !data.folders) {\n          notify(\"Fichier invalide\", true); return;\n        }\n\n        var uid = DB.get(\"dc_current\") ? DB.get(\"dc_current\").id : uid6();\n        var apiKey = CU ? CU.apiKey : \"\";\n        CU = { id: uid, name: data.profile.name, level: data.profile.level,\n               ai: data.profile.ai || \"groq\", apiKey: apiKey };\n        DB.set(\"dc_current\", CU);\n\n        sF(uid, data.folders || []);\n\n        if (data.stats) sSt(uid, data.stats);\n\n        if (data.cache) {\n          var cacheKeys = Object.keys(data.cache);\n          for (var i = 0; i < cacheKeys.length; i++) {\n\n            var newKey = cacheKeys[i].replace(/dc_cache_[^_]+/, \"dc_cache_\" + uid);\n            DB.set(newKey, data.cache[cacheKeys[i]]);\n          }\n        }\n\n        if (data.sr) {\n          var srKeys = Object.keys(data.sr);\n          for (var i = 0; i < srKeys.length; i++) {\n            var newKey = srKeys[i].replace(/dc_sr_[^_]+_/, \"dc_sr_\" + uid + \"_\");\n            DB.set(newKey, data.sr[srKeys[i]]);\n          }\n        }\n\n        _modelCache = {};\n        goScreen(\"app\");\n        renderDash();\n        notify(\"Import reussi \\u2014 \" + data.folders.length + \" dossiers restaures \\u2713\", false);\n      } catch(e) {\n        notify(\"Erreur lecture fichier : \" + e.message, true);\n      }\n    };\n    reader.readAsText(file);\n  };\n  input.click();\n}\nfunction renderDash() {\n  if (!CU) return;\n  var fs = gF(CU.id);\n  var st = gSt(CU.id);\n\n  document.getElementById(\"st-f\").textContent  = fs.length;\n  document.getElementById(\"st-se\").textContent = st.sessions || 0;\n  document.getElementById(\"st-st\").textContent = (st.streak || 0) + \"j\";\n\n  var scores = (st.scores || []).map(function(s) { return s.pct !== undefined ? s.pct : s; });\n  document.getElementById(\"st-sc\").textContent = scores.length\n    ? Math.round(scores.reduce(function(a, b) { return a + b; }, 0) / scores.length) + \"%\"\n    : \"\\u2014\";\n\n  var dl = document.getElementById(\"dash-fl\");\n  if (!dl) return;\n  if (!fs.length) {\n    dl.innerHTML = \"<div class=\\\"empty-hint\\\">Aucun dossier \\u2014 cr\\u00e9ez-en un dans l'onglet Dossiers</div>\";\n    return;\n  }\n  var h = \"\";\n  var items = fs.slice(0, 3);\n  for (var i = 0; i < items.length; i++) {\n    var f = items[i];\n    h += \"<div class=\\\"fcard\\\" data-fid=\\\"\" + f.id + \"\\\" onclick=\\\"openFM(this.dataset.fid)\\\">\";\n    h += \"<div class=\\\"fcard-in\\\"><div class=\\\"ftop\\\">\";\n    h += \"<div class=\\\"f-ic\\\">\" + f.icon + \"</div>\";\n    h += \"<div><div class=\\\"f-nm\\\">\" + esc(f.name) + \"</div>\";\n    h += \"<div class=\\\"f-ds\\\">\" + esc(f.description || \"\") + \"</div></div></div>\";\n    h += \"<div class=\\\"fstats\\\"><div class=\\\"fstat\\\">\" + (f.files || []).length + \" fichier(s)</div></div>\";\n    h += \"</div></div>\";\n  }\n  dl.innerHTML = h;\n}\n\nfunction renderF(q) {\n  q = q || \"\";\n  var fs   = gF(CU.id);\n  var list = document.getElementById(\"flist\");\n  if (!list) return;\n  var ff = q\n    ? fs.filter(function(f) { return f.name.toLowerCase().indexOf(q.toLowerCase()) !== -1; })\n    : fs;\n\n  if (!ff.length) {\n    list.innerHTML = \"<div class=\\\"empty-hint\\\">Aucun dossier.</div>\";\n    return;\n  }\n  var h = \"\";\n  for (var i = 0; i < ff.length; i++) {\n    var f    = ff[i];\n    var files = f.files || [];\n    h += \"<div class=\\\"fcard\\\">\";\n    h += \"<div class=\\\"fcard-in\\\">\";\n    h += \"<div class=\\\"ftop\\\">\";\n    h += \"<div class=\\\"f-ic\\\">\" + f.icon + \"</div>\";\n    h += \"<div style=\\\"flex:1\\\"><div class=\\\"f-nm\\\">\" + esc(f.name) + \"</div>\";\n    h += \"<div class=\\\"f-ds\\\">\" + esc(f.description || \"\") + \"</div></div>\";\n    h += \"<button class=\\\"icon-btn\\\" data-fid=\\\"\" + f.id + \"\\\" onclick=\\\"clearFolderCache(this.dataset.fid)\\\" title=\\\"Vider le cache IA\\\">&#128260;</button>\";\n    h += \"<button class=\\\"icon-btn\\\" data-fid=\\\"\" + f.id + \"\\\" onclick=\\\"delFolder(this.dataset.fid)\\\" title=\\\"Supprimer\\\">&#128465;</button>\";\n    h += \"</div>\";\n    if (files.length) {\n      h += \"<div class=\\\"file-list\\\">\";\n      for (var j = 0; j < files.length; j++) {\n        var fi = files[j];\n        h += \"<div class=\\\"file-item\\\">\";\n        h += \"<div class=\\\"file-ic\\\">\" + getFileIcon(fi.type) + \"</div>\";\n        h += \"<div style=\\\"flex:1\\\"><div class=\\\"file-nm\\\">\" + esc(fi.name) + \"</div>\";\n        h += \"<div class=\\\"file-meta\\\">\" + fmtSize(fi.size) + \"</div></div>\";\n        h += \"<div class=\\\"file-del\\\" data-fid=\\\"\" + f.id + \"\\\" data-cid=\\\"\" + fi.id + \"\\\" onclick=\\\"delFile(this.dataset.fid,this.dataset.cid)\\\">&#128465;</div>\";\n        h += \"</div>\";\n      }\n      h += \"</div>\";\n    }\n    h += \"<div class=\\\"f-actions\\\">\";\n    h += \"<button class=\\\"f-btn\\\" data-fid=\\\"\" + f.id + \"\\\" onclick=\\\"openAC(this.dataset.fid)\\\">+ Cours</button>\";\n    h += \"<button class=\\\"f-btn\\\" data-fid=\\\"\" + f.id + \"\\\" onclick=\\\"openFM(this.dataset.fid)\\\">\\u25b6 Reviser</button>\";\n    h += \"</div>\";\n    h += \"</div></div>\";\n  }\n  list.innerHTML = h;\n}\n\nfunction filterF(q) { renderF(q); }\n\nfunction clearFolderCache(fid) {\n  delAllCache(CU.id, fid);\n  notify(\"Cache IA vide \u2014 l'IA regenerera au prochain lancement\", false);\n}\n\nfunction delFolder(fid) {\n  if (!confirm(\"Supprimer ce dossier et tous ses cours ?\")) return;\n  var fs = gF(CU.id).filter(function(f) { return f.id !== fid; });\n  sF(CU.id, fs);\n  renderF(); renderDash(); rfModSel();\n  notify(\"Dossier supprime\", \"ok\");\n}\n\nfunction delFile(fid, cid) {\n  var fs = gF(CU.id);\n  for (var i = 0; i < fs.length; i++) {\n    if (fs[i].id === fid) {\n      fs[i].files = (fs[i].files || []).filter(function(x) { return x.id !== cid; });\n      break;\n    }\n  }\n  sF(CU.id, fs);\n  renderF(); notify(\"Fichier supprime\", \"ok\");\n}\n\nfunction rfModSel() {\n  var fs  = gF(CU.id);\n  var sel = document.getElementById(\"mfsel\");\n  if (!sel) return;\n  if (!fs.length) {\n    sel.innerHTML = \"<option>Creez d'abord un dossier avec des cours</option>\";\n    return;\n  }\n  var h = \"\";\n  for (var i = 0; i < fs.length; i++) {\n    h += \"<option value=\\\"\" + fs[i].id + \"\\\">\" + fs[i].icon + \" \" + esc(fs[i].name) +\n         \" (\" + (fs[i].files || []).length + \" fichier(s))</option>\";\n  }\n  sel.innerHTML = h;\n}\n\nfunction openFM(fid) {\n  rfModSel();\n  var sel = document.getElementById(\"mfsel\");\n  if (sel) sel.value = fid;\n  var bnis = document.querySelectorAll(\".bni\");\n  showPage(\"modules\", bnis[1] || null);\n  for (var i = 0; i < bnis.length; i++) bnis[i].classList.remove(\"active\");\n  if (bnis[1]) bnis[1].classList.add(\"active\");\n}\n\nfunction getCtx(fid) {\n  var fs = gF(CU.id), f = null;\n  for (var i = 0; i < fs.length; i++) { if (fs[i].id === fid) { f = fs[i]; break; } }\n  if (!f || !f.files || !f.files.length) return \"\";\n  var ctx = \"\";\n  for (var i = 0; i < f.files.length; i++) {\n    ctx += \"\\n\\n=== \" + f.files[i].name + \" ===\\n\" + (f.files[i].content || \"\");\n  }\n  return ctx; // pas de limite \u2014 splitCtx gere le decoupage\n}\n\nvar CHUNK_SIZE = 13000;\nfunction splitCtx(ctx) {\n  if (ctx.length <= CHUNK_SIZE) return [ctx];\n  var chunks = [], remaining = ctx;\n  while (remaining.length > 0) {\n    if (remaining.length <= CHUNK_SIZE) { chunks.push(remaining); break; }\n    var zone   = remaining.slice(CHUNK_SIZE - 500, CHUNK_SIZE + 500);\n    var cutIdx = zone.lastIndexOf(\"\\n\\n\");\n    if (cutIdx === -1) cutIdx = zone.lastIndexOf(\"\\n\");\n    if (cutIdx === -1) cutIdx = 500;\n    var cut = CHUNK_SIZE - 500 + cutIdx;\n    chunks.push(remaining.slice(0, cut));\n    remaining = remaining.slice(cut).trim();\n  }\n  return chunks;\n}\n\nfunction esc(s) {\n  return String(s)\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\"/g, \"&quot;\");\n}\n\nfunction openFolderModal() {\n  selIco = \"\\uD83D\\uDCC1\";\n  var icons = [\"\\uD83D\\uDCCA\",\"\\uD83D\\uDCC8\",\"\\uD83D\\uDCC9\",\"\\uD83C\\uDFE6\",\"\\uD83D\\uDCB0\",\n               \"\\uD83D\\uDCCB\",\"\\uD83D\\uDD2C\",\"\\u2696\\uFE0F\",\"\\uD83D\\uDCDA\",\"\\uD83D\\uDCBC\",\n               \"\\uD83C\\uDF93\",\"\\uD83D\\uDCCC\",\"\\uD83D\\uDCC1\",\"\\uD83D\\uDCF0\",\"\\uD83D\\uDCA1\"];\n  var ic = \"\";\n  for (var i = 0; i < icons.length; i++) {\n    ic += \"<span class=\\\"ico\\\" data-ico=\\\"\" + icons[i] + \"\\\" onclick=\\\"pickIco(this)\\\">\" + icons[i] + \"</span>\";\n  }\n  var mc = document.getElementById(\"mc\");\n  mc.innerHTML =\n    \"<div class=\\\"m-t\\\">\\uD83D\\uDCC1 Nouveau dossier</div>\" +\n    \"<div class=\\\"m-s\\\">Organisez vos cours par matiere.</div>\" +\n    \"<label class=\\\"m-lb\\\">Nom du dossier</label>\" +\n    \"<input class=\\\"m-in\\\" id=\\\"m-name\\\" placeholder=\\\"ex : Comptabilite generale\\\">\" +\n    \"<label class=\\\"m-lb\\\">Description</label>\" +\n    \"<input class=\\\"m-in\\\" id=\\\"m-desc\\\" placeholder=\\\"ex : Bilan, compte de resultat...\\\">\" +\n    \"<label class=\\\"m-lb\\\">Icone</label>\" +\n    \"<div class=\\\"ic-row\\\">\" + ic + \"</div>\" +\n    \"<button class=\\\"btn btn-gold btn-full\\\" onclick=\\\"subFolder()\\\">Creer &#8594;</button>\";\n  openModal();\n}\n\nfunction subFolder() {\n  var name = document.getElementById(\"m-name\").value.trim();\n  var desc = document.getElementById(\"m-desc\").value.trim();\n  if (!name) { notify(\"Donnez un nom au dossier\", true); return; }\n  var fs = gF(CU.id);\n  fs.push({\n    id: \"f_\" + Date.now(),\n    name: name, icon: selIco, description: desc,\n    files: [], createdAt: new Date().toISOString()\n  });\n  sF(CU.id, fs);\n  closeModal(); renderF(); renderDash(); rfModSel();\n  notify(\"\\\"\" + name + \"\\\" cree\", \"ok\");\n}\n\nfunction openAC(fid) {\n  var fs = gF(CU.id);\n  var fOpts = \"\";\n  for (var i = 0; i < fs.length; i++) {\n    fOpts += \"<option value=\\\"\" + fs[i].id + \"\\\"\" + (fs[i].id === fid ? \" selected\" : \"\") + \">\" +\n             fs[i].icon + \" \" + esc(fs[i].name) + \"</option>\";\n  }\n  var mc = document.getElementById(\"mc\");\n  mc.innerHTML =\n    \"<div class=\\\"m-t\\\">\\uD83D\\uDCC4 Ajouter un cours</div>\" +\n    \"<div class=\\\"m-s\\\">Importez un fichier ou collez le texte.</div>\" +\n    \"<label class=\\\"m-lb\\\">Dossier</label>\" +\n    \"<select class=\\\"m-in\\\" id=\\\"m-fol\\\">\" + fOpts + \"</select>\" +\n    \"<label class=\\\"m-lb\\\">Nom du cours</label>\" +\n    \"<input class=\\\"m-in\\\" id=\\\"m-cnm\\\" placeholder=\\\"ex : Chapitre 3 - Le bilan\\\">\" +\n    \"<label class=\\\"m-lb\\\">Importer un fichier</label>\" +\n    \"<div class=\\\"upload-zone\\\" id=\\\"uz\\\">\" +\n      \"<input type=\\\"file\\\" id=\\\"fi\\\" accept=\\\".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.csv\\\" onchange=\\\"handleFile(this)\\\">\" +\n      \"<div class=\\\"uz-ic\\\">\\uD83D\\uDCC4</div>\" +\n      \"<div class=\\\"uz-txt\\\">Glissez un fichier ou cliquez</div>\" +\n      \"<div class=\\\"uz-sub\\\">Texte extrait automatiquement</div>\" +\n      \"<div class=\\\"uz-formats\\\">\" +\n        \"<span class=\\\"uz-fmt\\\">.PDF</span>\" +\n        \"<span class=\\\"uz-fmt\\\">.DOCX</span>\" +\n        \"<span class=\\\"uz-fmt\\\">.PPTX</span>\" +\n        \"<span class=\\\"uz-fmt\\\">.XLSX</span>\" +\n        \"<span class=\\\"uz-fmt\\\">.TXT</span>\" +\n        \"<span class=\\\"uz-fmt\\\">.CSV</span>\" +\n      \"</div>\" +\n    \"</div>\" +\n    \"<div id=\\\"fprog\\\" style=\\\"display:none\\\">\" +\n      \"<div style=\\\"font-size:13px;color:var(--tx2);margin-bottom:6px\\\" id=\\\"fstat\\\">Lecture...</div>\" +\n      \"<div class=\\\"prog-bar\\\"><div class=\\\"prog-fill\\\" id=\\\"pfill\\\" style=\\\"width:30%\\\"></div></div>\" +\n    \"</div>\" +\n    \"<label class=\\\"m-lb\\\">Ou collez votre texte</label>\" +\n    \"<textarea class=\\\"m-in\\\" id=\\\"m-ctxt\\\" rows=\\\"7\\\" \" +\n      \"placeholder=\\\"Collez ici le texte complet de votre cours...\\\" \" +\n      \"style=\\\"resize:vertical;min-height:140px;font-size:13px;line-height:1.6\\\"></textarea>\" +\n    \"<button class=\\\"btn btn-gold btn-full\\\" onclick=\\\"subCourse()\\\">Ajouter au dossier &#8594;</button>\";\n  openModal();\n}\n\nfunction handleFile(input) {\n  var file = input.files[0];\n  if (!file) return;\n  var prog = document.getElementById(\"fprog\");\n  var stat = document.getElementById(\"fstat\");\n  var fill = document.getElementById(\"pfill\");\n  if (prog) prog.style.display = \"block\";\n  if (stat) stat.textContent   = \"Lecture de \\\"\" + file.name + \"\\\"...\";\n  if (fill) fill.style.width   = \"40%\";\n  var nameInp = document.getElementById(\"m-cnm\");\n  if (nameInp && !nameInp.value) nameInp.value = file.name.replace(/\\.[^.]+$/, \"\");\n  readFile(file, function(text) {\n    if (fill) fill.style.width = \"100%\";\n    if (stat) stat.textContent = \"\\u2713 \" + text.length + \" caracteres extraits\";\n    var ta = document.getElementById(\"m-ctxt\");\n    if (ta) ta.value = text;\n  });\n}\n\nfunction subCourse() {\n  var fid  = document.getElementById(\"m-fol\")  ? document.getElementById(\"m-fol\").value.trim()  : \"\";\n  var name = document.getElementById(\"m-cnm\")  ? document.getElementById(\"m-cnm\").value.trim()  : \"\";\n  var txt  = document.getElementById(\"m-ctxt\") ? document.getElementById(\"m-ctxt\").value.trim() : \"\";\n  if (!fid)  { notify(\"Selectionnez un dossier\", true); return; }\n  if (!name) { notify(\"Donnez un nom au cours\",  true); return; }\n  if (!txt)  { notify(\"Ajoutez du contenu\",      true); return; }\n  var fs = gF(CU.id), f = null;\n  for (var i = 0; i < fs.length; i++) { if (fs[i].id === fid) { f = fs[i]; break; } }\n  if (!f) return;\n  f.files = f.files || [];\n  var fi    = document.getElementById(\"fi\");\n  var ftype = fi && fi.files[0] ? fi.files[0].type : \"text/plain\";\n  var fsize = fi && fi.files[0] ? fi.files[0].size : txt.length;\n  f.files.push({\n    id: \"c_\" + Date.now(),\n    name: name,\n    content: txt.slice(0, 18000),\n    type: ftype, size: fsize,\n    addedAt: new Date().toISOString()\n  });\n  sF(CU.id, fs);\n  closeModal(); renderF(); renderDash();\n  notify(\"\\\"\" + name + \"\\\" ajoute\", \"ok\");\n}\n\nfunction pickIco(el) {\n  document.querySelectorAll(\".ico\").forEach(function(e) { e.classList.remove(\"sel\"); });\n  el.classList.add(\"sel\");\n  selIco = el.dataset.ico;\n}\nvar _modelCache  = {};\nvar _localEngine = null;   // moteur WebLLM si dispo\nvar _localReady  = false;  // modele charge et pret\nvar _localLoading = false; // chargement en cours\nvar _useLocal    = false;  // bascule local/cloud\nvar _extraInfo   = \"\";     // infos complementaires utilisateur\n\nvar MODEL_PREFS = {\n  deepseek: [\"deepseek-chat\",\"deepseek-reasoner\"],\n  groq:   [\"llama-3.3-70b-versatile\",\"llama-3.1-70b-versatile\",\"llama3-70b-8192\",\"mixtral-8x7b-32768\",\"llama3-8b-8192\"],\n  claude: [\"claude-opus-4-5\",\"claude-sonnet-4-5\",\"claude-3-7-sonnet-20250219\",\"claude-3-5-sonnet-20241022\",\"claude-3-5-haiku-20241022\"],\n  openai: [\"gpt-4o\",\"gpt-4o-mini\",\"gpt-4-turbo\",\"gpt-4\",\"gpt-3.5-turbo\"],\n  gemini: [\"gemini-2.0-flash\",\"gemini-2.0-flash-lite\",\"gemini-1.5-flash\",\"gemini-1.5-pro\",\"gemini-pro\"]\n};\n\nvar LOCAL_MODEL_ID = \"Phi-3-mini-4k-instruct-q4f16_1-MLC\";\n\nfunction hasWebGPU(){return false;}\n\nfunction initLocalAI(a,b,c){_useLocal=false;if(c)c(\"IA locale non dispo\");}\n\nfunction _callLocalAI(p,cb){if(cb)cb(\"[IA locale non disponible]\");}\n\nfunction callAI(prompt, cb) {\n\n  var finalPrompt = prompt;\n  if (_extraInfo) {\n    finalPrompt = \"INFOS COMPLEMENTAIRES SUR L'ETUDIANT (a prendre en compte):\\n\" + _extraInfo + \"\\n\\n\" + prompt;\n  }\n\n  if (_useLocal && _localReady) {\n    _callLocalAI(finalPrompt, cb); return;\n  }\n\n  var ai = CU ? CU.ai : \"groq\";\n  if (!CU || !CU.apiKey) {\n\n    cb(null, \"Aucune IA disponible. Configurez une cle API ou activez l'IA locale.\");\n    return;\n  }\n  if (_modelCache[ai]) { _doCallAI(finalPrompt, _modelCache[ai], cb); return; }\n  detectBestModel(ai, CU.apiKey, function(model) {\n    _modelCache[ai] = model;\n    _doCallAI(finalPrompt, model, cb);\n  });\n}\n\nfunction detectBestModel(ai, apiKey, done) {\n  if (ai === \"groq\") {\n    fetch(\"https://api.groq.com/openai/v1/models\", { headers: { \"Authorization\": \"Bearer \" + apiKey } })\n    .then(function(r) { return r.json(); })\n    .then(function(d) {\n      var av = (d.data || []).map(function(m) { return m.id; });\n      var pr = MODEL_PREFS.groq;\n      for (var i = 0; i < pr.length; i++) if (av.indexOf(pr[i]) !== -1) { done(pr[i]); return; }\n      done(av.find(function(m) { return m.indexOf(\"llama\") !== -1; }) || pr[0]);\n    }).catch(function() { done(MODEL_PREFS.groq[0]); });\n\n  } else if (ai === \"claude\") {\n    fetch(\"https://api.anthropic.com/v1/models\", {\n      headers: { \"x-api-key\": apiKey, \"anthropic-version\": \"2023-06-01\" }\n    })\n    .then(function(r) { return r.json(); })\n    .then(function(d) {\n      var av = (d.data || []).map(function(m) { return m.id; });\n      var pr = MODEL_PREFS.claude;\n      for (var i = 0; i < pr.length; i++) if (av.indexOf(pr[i]) !== -1) { done(pr[i]); return; }\n      done(pr[pr.length-1]);\n    }).catch(function() { done(MODEL_PREFS.claude[1]); });\n\n  } else if (ai === \"deepseek\") {\n    url = \"https://api.deepseek.com/v1/chat/completions\";\n    headers[\"Authorization\"] = \"Bearer \" + CU.apiKey;\n    body = JSON.stringify({ model: model, max_tokens: 3000,\n      messages: [{ role: \"system\", content: sysContent }, { role: \"user\", content: prompt }] });\n  } else if (ai === \"openai\") {\n    fetch(\"https://api.openai.com/v1/models\", { headers: { \"Authorization\": \"Bearer \" + apiKey } })\n    .then(function(r) { return r.json(); })\n    .then(function(d) {\n      var av = (d.data || []).map(function(m) { return m.id; });\n      var pr = MODEL_PREFS.openai;\n      for (var i = 0; i < pr.length; i++) if (av.indexOf(pr[i]) !== -1) { done(pr[i]); return; }\n      done(pr[0]);\n    }).catch(function() { done(MODEL_PREFS.openai[0]); });\n\n  } else {\n    fetch(\"https://generativelanguage.googleapis.com/v1beta/models?key=\" + apiKey)\n    .then(function(r) { return r.json(); })\n    .then(function(d) {\n      var av = (d.models || [])\n        .filter(function(m) { return m.supportedGenerationMethods && m.supportedGenerationMethods.indexOf(\"generateContent\") !== -1; })\n        .map(function(m) { return m.name.replace(\"models/\", \"\"); });\n      var pr = MODEL_PREFS.gemini;\n      for (var i = 0; i < pr.length; i++) if (av.indexOf(pr[i]) !== -1) { done(pr[i]); return; }\n      done(av.find(function(m) { return m.indexOf(\"flash\") !== -1; }) || pr[0]);\n    }).catch(function() { done(MODEL_PREFS.gemini[0]); });\n  }\n}\n\nfunction _doCallAI(prompt, model, cb) {\n  var ai = CU.ai;\n  var url, headers = { \"Content-Type\": \"application/json\" }, body;\n  var sysContent = \"Tu es un professeur expert qui prepare ses etudiants aux examens. Reponds toujours en francais.\";\n\n  if (ai === \"groq\") {\n    url = \"https://api.groq.com/openai/v1/chat/completions\";\n    headers[\"Authorization\"] = \"Bearer \" + CU.apiKey;\n    body = JSON.stringify({\n      model: model, max_tokens: 3000,\n      messages: [\n        { role: \"system\", content: sysContent },\n        { role: \"user\",   content: prompt }\n      ]\n    });\n  } else if (ai === \"claude\") {\n    url = \"https://api.anthropic.com/v1/messages\";\n    headers[\"x-api-key\"]         = CU.apiKey;\n    headers[\"anthropic-version\"] = \"2023-06-01\";\n    body = JSON.stringify({ model: model, max_tokens: 3000, messages: [{ role: \"user\", content: prompt }] });\n  } else if (ai === \"deepseek\") {\n    url = \"https://api.deepseek.com/v1/chat/completions\";\n    headers[\"Authorization\"] = \"Bearer \" + CU.apiKey;\n    body = JSON.stringify({ model: model, max_tokens: 3000,\n      messages: [{ role: \"system\", content: sysContent }, { role: \"user\", content: prompt }] });\n  } else if (ai === \"openai\") {\n    url = \"https://api.openai.com/v1/chat/completions\";\n    headers[\"Authorization\"] = \"Bearer \" + CU.apiKey;\n    body = JSON.stringify({\n      model: model, max_tokens: 3000,\n      messages: [\n        { role: \"system\", content: sysContent },\n        { role: \"user\",   content: prompt }\n      ]\n    });\n  } else {\n    url = \"https://generativelanguage.googleapis.com/v1beta/models/\" + model + \":generateContent?key=\" + CU.apiKey;\n    body = JSON.stringify({ contents: [{ role: \"user\", parts: [{ text: prompt }] }] });\n  }\n\n  fetch(url, { method: \"POST\", headers: headers, body: body })\n  .then(function(r) { return r.json(); })\n  .then(function(d) {\n    if (ai === \"groq\" || ai === \"openai\") {\n      if (d.error) cb(null, d.error.message);\n      else         cb(d.choices[0].message.content, null);\n    } else if (ai === \"claude\") {\n      if (d.error) {\n        if (d.error.message && d.error.message.indexOf(\"not found\") !== -1) delete _modelCache[ai];\n        cb(null, d.error.message);\n      } else cb(d.content[0].text, null);\n    } else {\n      if (d.error) {\n        if (d.error.message && (d.error.message.indexOf(\"not found\") !== -1 || d.error.message.indexOf(\"not supported\") !== -1)) delete _modelCache[ai];\n        cb(null, d.error.message);\n      } else cb(d.candidates[0].content.parts[0].text, null);\n    }\n  }).catch(function(e) { cb(null, e.message); });\n}\n",'Part1'))return;
+  setTimeout(function(){
+    _prog(60,'Chargement 2/3...');
+    if(!_run("function loadExtraInfo() {\n  if (CU) _extraInfo = DB.get(\"dc_extra_\" + CU.id) || \"\";\n  return _extraInfo;\n}\nfunction saveExtraInfo(text) {\n  _extraInfo = text;\n  if (CU) DB.set(\"dc_extra_\" + CU.id, text);\n}\n\nfunction getAIMode() {\n  return _useLocal && _localReady ? \"local\" : \"cloud\";\n}\nfunction setAIMode(local) {\n  _useLocal = local;\n  DB.set(\"dc_aimode\", local ? \"local\" : \"cloud\");\n}\nfunction loadAIMode() {\n  _useLocal = DB.get(\"dc_aimode\") === \"local\";\n}\n\nfunction getPrompt(type, ctx) {\n  var base =\n    \"Tu es un professeur expert qui prepare ses etudiants aux examens. \" +\n    \"Analyse le cours suivant et identifie UNIQUEMENT les notions, definitions, formules et concepts \" +\n    \"susceptibles d'etre poses lors d'un examen ou interrogation. \" +\n    \"Ignore les exemples anecdotiques et les details non evaluables. \" +\n    \"Concentre-toi sur : definitions cles, theoremes, regles, formules, distinctions importantes, pieges classiques. \" +\n    \"Reponds UNIQUEMENT avec le JSON demande, sans texte avant ni apres, sans balises markdown.\\n\\n\" +\n    \"CONTENU DU COURS:\\n\" + ctx + \"\\n\\n\";\n\n  if (type === \"flashcard\")\n    return base +\n      \"Cree exactement 10 flashcards sur les notions les plus importantes pour l'examen. \" +\n      \"Privilegie les definitions, distinctions cles et regles fondamentales. \" +\n      \"Format JSON: [{\\\"front\\\":\\\"question directe comme en examen\\\",\\\"back\\\":\\\"reponse precise et complete (2-3 phrases)\\\"}]\";\n\n  if (type === \"qcm\")\n    return base +\n      \"Cree exactement 8 questions QCM du type de celles posees en examen. \" +\n      \"Inclus des pieges classiques et distinctions subtiles que les etudiants confondent souvent. \" +\n      \"Format JSON: [{\\\"q\\\":\\\"question\\\",\\\"opts\\\":[\\\"A\\\",\\\"B\\\",\\\"C\\\",\\\"D\\\"],\\\"correct\\\":0,\\\"exp\\\":\\\"explication pourquoi c est la bonne reponse\\\"}] \" +\n      \"(correct = index 0 a 3 de la bonne reponse)\";\n\n  if (type === \"vf\")\n    return base +\n      \"Cree exactement 10 affirmations Vrai/Faux sur les points qui font souvent l'objet d'erreurs en examen. \" +\n      \"Inclus des affirmations partiellement vraies comme en examen reel. \" +\n      \"Format JSON: [{\\\"statement\\\":\\\"affirmation\\\",\\\"answer\\\":true,\\\"exp\\\":\\\"explication precise\\\"}]\";\n\n  if (type === \"fill\")\n    return base +\n      \"Cree 8 phrases a trous centrees sur les termes techniques et definitions cles. \" +\n      \"Le trou _____ doit remplacer un mot indispensable a connaitre pour l'examen. \" +\n      \"Format JSON: [{\\\"sentence\\\":\\\"phrase avec _____ a la place du terme cle\\\",\\\"answer\\\":\\\"le terme exact\\\",\\\"hint\\\":\\\"indice pour guider\\\"}]\";\n\n  if (type === \"match\")\n    return base +\n      \"Cree exactement 6 paires terme/definition en choisissant les 6 notions les plus importantes. \" +\n      \"Format JSON: [{\\\"term\\\":\\\"terme technique\\\",\\\"definition\\\":\\\"definition precise et complete\\\"}]\";\n\n  if (type === \"exam\")\n    return base +\n      \"Cree un examen realiste de 15 questions comme un vrai partiel : \" +\n      \"5 QCM (avec pieges), 5 vrai/faux, 5 phrases a trous (termes techniques). \" +\n      \"Format JSON: [\" +\n        \"{\\\"type\\\":\\\"qcm\\\",\\\"q\\\":\\\"question\\\",\\\"opts\\\":[\\\"A\\\",\\\"B\\\",\\\"C\\\",\\\"D\\\"],\\\"correct\\\":0,\\\"exp\\\":\\\"explication\\\"},\" +\n        \"{\\\"type\\\":\\\"vf\\\",\\\"statement\\\":\\\"affirmation\\\",\\\"answer\\\":true,\\\"exp\\\":\\\"explication\\\"},\" +\n        \"{\\\"type\\\":\\\"fill\\\",\\\"sentence\\\":\\\"phrase avec _____\\\",\\\"answer\\\":\\\"mot\\\",\\\"hint\\\":\\\"indice\\\"}\" +\n      \"] (15 items au total)\";\n\n  if (type === \"glossary\")\n    return base +\n      \"Extrais tous les termes techniques que l'etudiant DOIT connaitre pour l'examen. \" +\n      \"Format JSON: [{\\\"term\\\":\\\"terme\\\",\\\"definition\\\":\\\"definition rigoureuse en 1-2 phrases\\\"}] \" +\n      \"(entre 10 et 20 termes, du plus important au moins important)\";\n\n  if (type === \"summary\")\n    return \"Tu es un professeur expert qui prepare ses etudiants aux examens. \" +\n      \"Cree une fiche de revision structuree en markdown, \" +\n      \"en te concentrant UNIQUEMENT sur ce qui peut etre evalue en examen. \" +\n      \"Utilise # pour le titre, ## pour les sections, ### pour les sous-sections, \" +\n      \"**gras** pour les termes et regles indispensables, et des listes a puces. \" +\n      \"Structure: Notions fondamentales > Regles et formules > Distinctions importantes > Pieges a eviter > Ce qui tombe souvent a l examen.\\n\\n\" +\n      \"CONTENU:\\n\" + ctx;\n}\n\nfunction readFile(file, callback) {\n  var reader = new FileReader();\n  var ext    = (file.name || \"\").split(\".\").pop().toLowerCase();\n  var type   = file.type || \"\";\n\n  if (type.indexOf(\"text\") !== -1 || ext === \"txt\" || ext === \"md\" || ext === \"csv\") {\n    reader.onload = function(e) { callback(e.target.result); };\n    reader.readAsText(file, \"UTF-8\");\n    return;\n  }\n  reader.onload = function(e) {\n    if (ext === \"pdf\" || type.indexOf(\"pdf\") !== -1) {\n      extractPDF(e.target.result, callback);\n    } else if (\n      ext === \"docx\" || ext === \"pptx\" || ext === \"xlsx\" ||\n      type.indexOf(\"officedocument\") !== -1 || type.indexOf(\"msword\") !== -1\n    ) {\n      extractOffice(e.target.result, ext, callback);\n    } else {\n      callback(\"[Fichier non lisible - copiez le texte manuellement]\");\n    }\n  };\n  reader.readAsArrayBuffer(file);\n}\n\nfunction extractPDF(buf, cb) {\n  var lib = window[\"pdfjs-dist/build/pdf\"];\n  if (!lib || !lib.getDocument) { extractPDFFallback(buf, cb); return; }\n  lib.GlobalWorkerOptions.workerSrc =\n    \"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js\";\n  lib.getDocument({ data: new Uint8Array(buf) }).promise.then(function(pdf) {\n    var total = pdf.numPages, allText = \"\", done = 0;\n    for (var p = 1; p <= total; p++) {\n      (function(pn) {\n        pdf.getPage(pn).then(function(page) {\n          page.getTextContent().then(function(tc) {\n            allText += \"\\n--- Page \" + pn + \" ---\\n\" + tc.items.map(function(i) { return i.str; }).join(\" \");\n            done++;\n            if (done === total) {\n              var r = allText.trim();\n              if (r.length < 50) extractPDFFallback(buf, cb);\n              else cb(r);\n            }\n          }).catch(function() { done++; if (done === total) cb(allText.trim() || \"[PDF vide]\"); });\n        }).catch(function() { done++; if (done === total) cb(allText.trim() || \"[PDF vide]\"); });\n      })(p);\n    }\n  }).catch(function() { extractPDFFallback(buf, cb); });\n}\n\nfunction extractPDFFallback(buf, cb) {\n  try {\n    var bytes = new Uint8Array(buf), str = \"\";\n    for (var i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]);\n    var text = \"\", blocks = str.match(/BT[\\s\\S]*?ET/g) || [];\n    for (var i = 0; i < blocks.length; i++) {\n      var txts = blocks[i].match(/\\(([^)]*)\\)\\s*T[jJ]/g) || [];\n      for (var j = 0; j < txts.length; j++)\n        text += txts[j].replace(/^\\(/, \"\").replace(/\\)\\s*T[jJ]$/, \"\") + \" \";\n      text += \"\\n\";\n    }\n    if (text.trim().length < 50)\n      text = str.replace(/[^\\x20-\\x7E\\n]/g, \" \").split(/\\s+/).filter(function(w) { return w.length > 3; }).join(\" \");\n    cb(text.trim() || \"[PDF : texte non extractible - copiez le texte manuellement]\");\n  } catch(e) { cb(\"[PDF : erreur - copiez le texte manuellement]\"); }\n}\n\nfunction extractOffice(buf, ext, cb) {\n  try {\n    var bytes = new Uint8Array(buf), str = \"\";\n    var limit = Math.min(bytes.length, 1000000);\n    for (var i = 0; i < limit; i++) str += String.fromCharCode(bytes[i]);\n    var text = \"\";\n    var rx = [/<w:t[^>]*>([^<]+)<\\/w:t>/g, /<a:t[^>]*>([^<]+)<\\/a:t>/g, /<t[^>]*>([^<]*)<\\/t>/g];\n    for (var r = 0; r < rx.length; r++) {\n      var m;\n      while ((m = rx[r].exec(str)) !== null) { var t = m[1].trim(); if (t) text += t + \" \"; }\n    }\n    if (text.trim().length < 20 && ext === \"xlsx\") {\n      var cm = str.match(/<v>([^<]+)<\\/v>/g) || [];\n      for (var i = 0; i < cm.length; i++) text += cm[i].replace(/<[^>]+>/g, \"\") + \" \";\n    }\n    cb(text.trim().length > 30\n      ? text.trim()\n      : \"[\" + ext.toUpperCase() + \" : texte non extractible - copiez le texte manuellement]\");\n  } catch(e) { cb(\"[\" + ext.toUpperCase() + \" : erreur - copiez le texte manuellement]\"); }\n}\nvar MNAMES  = { flashcard:\"Flashcards\", qcm:\"QCM\", vf:\"Vrai / Faux\",\n                fill:\"Completer\", match:\"Associations\", summary:\"Synthese\",\n                exam:\"Mode Examen\", glossary:\"Glossaire\" };\nvar MCOLORS = { flashcard:\"var(--gold)\", qcm:\"var(--green)\", vf:\"var(--blue2)\",\n                fill:\"var(--red2)\", match:\"var(--gold)\", summary:\"var(--green)\",\n                exam:\"var(--pk)\", glossary:\"var(--tx2)\" };\n\nvar CACHEABLE = [\"flashcard\", \"qcm\", \"vf\", \"fill\", \"match\", \"summary\", \"glossary\"];\n\nfunction goLearn(type) {\n  var fs = gF(CU.id);\n  if (!fs.length) { notify(\"Creez d'abord un dossier avec des cours\", true); return; }\n  if (fs.length === 1) { launchLearn(type, fs[0].id); return; }\n  openPickFolder(type);\n}\n\nfunction goLearnFrom(type) {\n  var fid = document.getElementById(\"mfsel\") ? document.getElementById(\"mfsel\").value : \"\";\n  if (!fid || fid.indexOf(\"Creez\") !== -1) {\n    notify(\"Selectionnez un dossier avec des cours\", true); return;\n  }\n  launchLearn(type, fid);\n}\n\nfunction openPickFolder(type) {\n  var fs = gF(CU.id);\n  if (!fs.length) { notify(\"Creez un dossier avec des cours\", true); return; }\n  var rows = \"\";\n  for (var i = 0; i < fs.length; i++) {\n    rows += \"<div class=\\\"srow\\\" data-type=\\\"\" + type + \"\\\" data-fid=\\\"\" + fs[i].id + \"\\\"\" +\n            \" onclick=\\\"closeModal();launchLearn(this.dataset.type,this.dataset.fid)\\\">\" +\n            \"<div class=\\\"s-ic\\\">\" + fs[i].icon + \"</div>\" +\n            \"<div class=\\\"s-tx\\\"><div class=\\\"s-lb\\\">\" + esc(fs[i].name) + \"</div>\" +\n            \"<div class=\\\"s-sb\\\">\" + (fs[i].files||[]).length + \" fichier(s)</div></div>\" +\n            \"<div class=\\\"s-ar\\\">&#8250;</div></div>\";\n  }\n  document.getElementById(\"mc\").innerHTML =\n    \"<div class=\\\"m-t\\\">Choisir un dossier</div>\" +\n    \"<div class=\\\"m-s\\\">Quel dossier utiliser pour ce module ?</div>\" + rows;\n  openModal();\n}\n\nfunction launchLearn(type, fid) {\n  var fs = gF(CU.id), f = null;\n  for (var i = 0; i < fs.length; i++) { if (fs[i].id === fid) { f = fs[i]; break; } }\n  if (!f) { notify(\"Dossier introuvable\", true); return; }\n  if (!f.files || !f.files.length) { notify(\"Ajoutez des cours dans ce dossier\", true); return; }\n\n  lType = type; curFid = fid; curFnm = f.name; lIdx = 0; lScore = 0; lMissed = [];\n\n  document.getElementById(\"l-nm\").textContent = MNAMES[type] || type;\n  document.getElementById(\"l-pf\").style.background =\n    \"linear-gradient(90deg,\" + MCOLORS[type] + \",\" + MCOLORS[type] + \"88)\";\n\n  var badge = document.getElementById(\"l-badge\");\n  if (badge) badge.style.display = (type === \"exam\") ? \"flex\" : \"none\";\n\n  goScreen(\"learn\");\n\n  if (CACHEABLE.indexOf(type) !== -1) {\n    var cached = gCache(CU.id, fid, type);\n    if (cached) {\n      showCachePrompt(type, fid, f.name, cached);\n      return;\n    }\n  }\n\n  document.getElementById(\"lcont\").innerHTML = loadingHTML(\"Analyse de \\\"\" + esc(f.name) + \"\\\"...\");\n\n  var st = gSt(CU.id);\n  st.sessions = (st.sessions || 0) + 1;\n  sSt(CU.id, st);\n  updateStreak();\n\n  genModule(type, getCtx(fid), f.name);\n}\n\nfunction showCachePrompt(type, fid, fname, cached) {\n  var dateStr = fmtDate(cached.date);\n  var count   = Array.isArray(cached.data) ? cached.data.length + \" elements\" : \"disponible\";\n  document.getElementById(\"lcont\").innerHTML =\n    \"<div class=\\\"gload\\\">\" +\n    \"<div style=\\\"font-size:44px\\\">&#128190;</div>\" +\n    \"<div class=\\\"g-t\\\">\" + esc(MNAMES[type]) + \" disponible</div>\" +\n    \"<div class=\\\"g-s\\\">Genere le \" + dateStr + \" &mdash; \" + count + \"</div>\" +\n    \"<button class=\\\"btn btn-gold btn-full\\\" style=\\\"margin-top:20px\\\" onclick=\\\"loadFromCache()\\\">&#9654; Utiliser ce contenu</button>\" +\n    \"<button class=\\\"btn btn-ghost btn-full\\\" style=\\\"margin-top:8px\\\" onclick=\\\"regenModule()\\\">&#8635; Regenerer avec l'IA</button>\" +\n    \"<button class=\\\"btn btn-ghost btn-full\\\" style=\\\"margin-top:8px\\\" onclick=\\\"exitLearn()\\\">&#8592; Retour</button>\" +\n    \"</div>\";\n}\n\nfunction loadFromCache() {\n  var cached = gCache(CU.id, curFid, lType);\n  if (!cached) { regenModule(); return; }\n\n  var st = gSt(CU.id);\n  st.sessions = (st.sessions || 0) + 1;\n  sSt(CU.id, st);\n  updateStreak();\n\n  if (lType === \"summary\") { renderSummary(cached.data); return; }\n  if (lType === \"glossary\") { renderGlossary(JSON.stringify(cached.data)); return; }\n  lData = cached.data.slice();\n  lIdx = 0; lScore = 0; lMissed = [];\n  if (lType === \"exam\") startExamTimer();\n  renderStep();\n}\n\nfunction regenModule() {\n\n  delCache(CU.id, curFid, lType);\n  document.getElementById(\"lcont\").innerHTML = loadingHTML(\"Generation en cours...\");\n  var st = gSt(CU.id);\n  st.sessions = (st.sessions || 0) + 1;\n  sSt(CU.id, st);\n  updateStreak();\n  genModule(lType, getCtx(curFid), curFnm);\n}\n\nfunction loadingHTML(msg) {\n  return \"<div class=\\\"gload\\\">\" +\n         \"<div class=\\\"gsp\\\"></div>\" +\n         \"<div class=\\\"g-t\\\">Generation en cours</div>\" +\n         \"<div class=\\\"g-s\\\">\" + msg + \"</div>\" +\n         \"<div class=\\\"g-dots\\\"><div class=\\\"g-dot\\\"></div><div class=\\\"g-dot\\\"></div><div class=\\\"g-dot\\\"></div></div>\" +\n         \"</div>\";\n}\n\nfunction genModule(type, ctx, fname) {\n  if (!ctx) {\n    document.getElementById(\"lcont\").innerHTML =\n      \"<div class=\\\"gload\\\"><div style=\\\"font-size:44px\\\">\\uD83D\\uDCC1</div>\" +\n      \"<div class=\\\"g-t\\\">Dossier vide</div>\" +\n      \"<div class=\\\"g-s\\\">Ajoutez des cours dans ce dossier</div>\" +\n      \"<button class=\\\"btn btn-ghost\\\" style=\\\"margin-top:20px\\\" onclick=\\\"exitLearn()\\\">&#8592; Retour</button></div>\";\n    return;\n  }\n  var chunks = splitCtx(ctx);\n  if (chunks.length === 1) { genModuleSingle(type, chunks[0], fname); return; }\n\n  document.getElementById(\"lcont\").innerHTML = loadingHTML(\n    \"Syllabus long \\u2014 \" + chunks.length + \" parties \\u00e0 analyser\"\n  );\n  if (type === \"summary\" || type === \"glossary\") {\n    genModuleChunked(type, chunks, fname, 0, []);\n  } else {\n    genModuleChunkedJSON(type, chunks, fname, 0, []);\n  }\n}\n\nfunction delay(ms) {\n  return new Promise(function(resolve) { setTimeout(resolve, ms); });\n}\n\nfunction genModuleChunkedJSON(type, chunks, fname, idx, accumulated) {\n  var lc = document.getElementById(\"lcont\");\n  if (!lc) return;\n\n  var pct = Math.round(idx / chunks.length * 100);\n  lc.innerHTML = loadingHTML(\n    \"Partie \" + (idx+1) + \"/\" + chunks.length + \" \\u2014 \" + esc(fname) +\n    (idx > 0 ? \"<br><small style='opacity:.6'>Pause anti-limite IA...</small>\" : \"\")\n  );\n  document.getElementById(\"l-pf\").style.width = pct + \"%\";\n  document.getElementById(\"l-ct\").textContent = \"Analyse \" + (idx+1) + \"/\" + chunks.length;\n\n  var waitMs = idx > 0 ? 2000 : 0;\n  delay(waitMs).then(function() {\n    callAI(getPrompt(type, chunks[idx]), function(text, err) {\n      if (!err && text) {\n        try {\n          var clean = text.replace(/```json\\n?/g, \"\").replace(/```\\n?/g, \"\").trim();\n          var items = JSON.parse(clean);\n          if (Array.isArray(items)) accumulated = accumulated.concat(items);\n        } catch(e) {}\n      }\n      if (idx + 1 < chunks.length) {\n        genModuleChunkedJSON(type, chunks, fname, idx + 1, accumulated);\n      } else {\n        var maxItems = { flashcard:20, qcm:16, vf:20, fill:16, match:12, exam:15 };\n        var max = maxItems[type] || 20;\n\n        for (var i = accumulated.length - 1; i > 0; i--) {\n          var j = Math.floor(Math.random() * (i + 1));\n          var tmp = accumulated[i]; accumulated[i] = accumulated[j]; accumulated[j] = tmp;\n        }\n        var result = accumulated.slice(0, max);\n\n        if (CACHEABLE.indexOf(type) !== -1) sCache(CU.id, curFid, type, result);\n        lData = result;\n        lIdx = 0; lScore = 0; lMissed = [];\n        if (!lData.length) { showGenError(\"Aucun contenu genere. Reessayez.\"); return; }\n        if (type === \"exam\") startExamTimer();\n        renderStep();\n      }\n    });\n  });\n}\n\nfunction genModuleChunked(type, chunks, fname, idx, parts) {\n  var lc = document.getElementById(\"lcont\");\n  if (!lc) return;\n\n  lc.innerHTML = loadingHTML(\n    \"Partie \" + (idx+1) + \"/\" + chunks.length + \" \\u2014 \" + esc(fname) +\n    (idx > 0 ? \"<br><small style='opacity:.6'>Pause anti-limite IA...</small>\" : \"\")\n  );\n  document.getElementById(\"l-pf\").style.width = Math.round(idx / chunks.length * 100) + \"%\";\n  document.getElementById(\"l-ct\").textContent = \"Analyse \" + (idx+1) + \"/\" + chunks.length;\n\n  var waitMs = idx > 0 ? 2000 : 0;\n  delay(waitMs).then(function() {\n    callAI(getPrompt(type, chunks[idx]), function(text, err) {\n      if (!err && text) parts.push(text);\n      if (idx + 1 < chunks.length) {\n        genModuleChunked(type, chunks, fname, idx + 1, parts);\n      } else {\n        if (type === \"summary\") {\n          var merged = parts.join(\"\\n\\n---\\n\\n\");\n          sCache(CU.id, curFid, \"summary\", merged);\n          renderSummary(merged);\n          return;\n        }\n        if (type === \"glossary\") {\n          var allTerms = [], seen = {}, unique = [];\n          for (var i = 0; i < parts.length; i++) {\n            try {\n              var cl = parts[i].replace(/```json\\n?/g, \"\").replace(/```\\n?/g, \"\").trim();\n              var it = JSON.parse(cl);\n              if (Array.isArray(it)) allTerms = allTerms.concat(it);\n            } catch(e) {}\n          }\n          for (var i = 0; i < allTerms.length; i++) {\n            var k = (allTerms[i].term || \"\").toLowerCase();\n            if (!seen[k]) { seen[k] = true; unique.push(allTerms[i]); }\n          }\n          sCache(CU.id, curFid, \"glossary\", unique);\n          renderGlossary(JSON.stringify(unique));\n        }\n      }\n    });\n  });\n}\n\nfunction genModuleSingle(type, ctx, fname) {\n  callAI(getPrompt(type, ctx), function(text, err) {\n    if (err) { showGenError(err); return; }\n    if (type === \"summary\") {\n      sCache(CU.id, curFid, \"summary\", text);\n      renderSummary(text);\n      return;\n    }\n    if (type === \"glossary\") {\n      try {\n        var cl = text.replace(/```json\\n?/g,\"\").replace(/```\\n?/g,\"\").trim();\n        var it = JSON.parse(cl);\n        sCache(CU.id, curFid, \"glossary\", it);\n      } catch(e) {}\n      renderGlossary(text);\n      return;\n    }\n    try {\n      var clean = text.replace(/```json\\n?/g, \"\").replace(/```\\n?/g, \"\").trim();\n      lData = JSON.parse(clean);\n      lIdx = 0; lScore = 0; lMissed = [];\n\n      if (CACHEABLE.indexOf(type) !== -1) sCache(CU.id, curFid, type, lData);\n      if (type === \"exam\") startExamTimer();\n      renderStep();\n    } catch(e) { showGenError(\"Format JSON invalide. Reessayez.\"); }\n  });\n}\n\nfunction showGenError(msg) {\n  var lc = document.getElementById(\"lcont\");\n  if (!lc) return;\n  lc.innerHTML =\n    \"<div class=\\\"gload\\\"><div style=\\\"font-size:44px\\\">&#10060;</div>\" +\n    \"<div class=\\\"g-t\\\">Erreur IA</div>\" +\n    \"<div class=\\\"g-s\\\">\" + esc(msg) + \"</div>\" +\n    \"<button class=\\\"btn btn-ghost\\\" style=\\\"margin-top:20px\\\" onclick=\\\"launchLearn(lType,curFid)\\\">&#8635; Reessayer</button>\" +\n    \"<button class=\\\"btn btn-ghost\\\" style=\\\"margin-top:8px\\\" onclick=\\\"exitLearn()\\\">&#8592; Retour</button></div>\";\n}\n\nfunction updProg() {\n  var pct = lData.length ? Math.round(lIdx / lData.length * 100) : 0;\n  document.getElementById(\"l-pf\").style.width  = pct + \"%\";\n  document.getElementById(\"l-ct\").textContent  = lIdx + \"/\" + lData.length;\n}\n\nfunction renderStep() {\n  updProg();\n  if (lIdx >= lData.length) { showResult(); return; }\n  var item = lData[lIdx];\n  var lc   = document.getElementById(\"lcont\");\n  if (lType === \"flashcard\") renderFC(item, lc);\n  else if (lType === \"qcm\")  renderQCM(item, lc);\n  else if (lType === \"vf\")   renderVF(item, lc);\n  else if (lType === \"fill\") renderFill(item, lc);\n  else if (lType === \"match\") renderMatch(lc);\n  else if (lType === \"exam\") renderExamStep(item, lc);\n}\nfunction nextStep() { lIdx++; renderStep(); }\n\nvar fcFlip = false;\n\nfunction renderFC(item, lc) {\n  var dots = \"\";\n  for (var i = 0; i < lData.length; i++) {\n    dots += \"<div class=\\\"fcd \" + (i < lIdx ? \"done\" : i === lIdx ? \"active\" : \"\") + \"\\\"></div>\";\n  }\n  var srData = gSR(CU.id, curFid);\n  var cardKey = \"fc_\" + lIdx;\n  var sr      = srData[cardKey];\n  var srBadge = \"\";\n  if (sr) {\n    var due = new Date(sr.due), now = new Date();\n    srBadge = \"<div class=\\\"sr-badge \" + (due <= now ? \"sr-due\" : \"sr-ok\") + \"\\\">\" +\n              (due <= now ? \"A revoir\" : \"Intervalle: \" + sr.interval + \"j\") + \"</div>\";\n  }\n  lc.innerHTML =\n    \"<div class=\\\"fc-wrap\\\">\" +\n    \"<div class=\\\"fc\\\" id=\\\"fc\\\" onclick=\\\"flipFC()\\\">\" +\n      \"<div class=\\\"fc-face fc-fr\\\">\" +\n        \"<div class=\\\"fc-lb\\\">Question</div>\" +\n        \"<div class=\\\"fc-tx\\\">\" + esc(item.front) + \"</div>\" +\n        \"<div class=\\\"fc-hint\\\">Appuyez pour reveler</div>\" +\n      \"</div>\" +\n      \"<div class=\\\"fc-face fc-bk\\\">\" +\n        \"<div class=\\\"fc-lb\\\">Reponse</div>\" +\n        \"<div class=\\\"fc-tx\\\">\" + esc(item.back) + \"</div>\" +\n        srBadge +\n      \"</div>\" +\n    \"</div></div>\" +\n    \"<div class=\\\"fc-dots\\\">\" + dots + \"</div>\" +\n    \"<div class=\\\"fc-acts\\\" id=\\\"fc-acts\\\" style=\\\"display:none\\\">\" +\n      \"<button class=\\\"fc-btn fc-no\\\"  onclick=\\\"fcAns(0)\\\">&#10005; Rate</button>\" +\n      \"<button class=\\\"fc-btn fc-med\\\" onclick=\\\"fcAns(3)\\\">&#9711; Difficile</button>\" +\n      \"<button class=\\\"fc-btn fc-yes\\\" onclick=\\\"fcAns(5)\\\">&#10003; Facile</button>\" +\n    \"</div>\" +\n    \"<div style=\\\"text-align:center;padding:0 0 10px\\\">\" +\n      \"<button class=\\\"btn btn-ghost\\\" onclick=\\\"flipFC()\\\">Retourner la carte</button>\" +\n    \"</div>\";\n  fcFlip = false;\n}\n\nfunction flipFC() {\n  fcFlip = !fcFlip;\n  var fc = document.getElementById(\"fc\");\n  if (fcFlip) fc.classList.add(\"flip\"); else fc.classList.remove(\"flip\");\n  if (fcFlip) document.getElementById(\"fc-acts\").style.display = \"flex\";\n}\n\nfunction fcAns(quality) {\n  var srData  = gSR(CU.id, curFid);\n  var cardKey = \"fc_\" + lIdx;\n  var sr      = srData[cardKey] || { interval: 1, ease: 2.5, reps: 0 };\n  if (quality >= 3) {\n    lScore++;\n    if (sr.reps === 0)      sr.interval = 1;\n    else if (sr.reps === 1) sr.interval = 6;\n    else                    sr.interval = Math.round(sr.interval * sr.ease);\n    sr.ease = Math.max(1.3, sr.ease + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));\n    sr.reps++;\n  } else {\n    lMissed.push(lData[lIdx]);\n    sr.interval = 1; sr.reps = 0;\n  }\n  sr.due = new Date(Date.now() + sr.interval * 86400000).toISOString();\n  srData[cardKey] = sr;\n  sSR(CU.id, curFid, srData);\n  lIdx++; fcFlip = false; renderStep();\n}\n\nfunction exitLearn() {\n  stopExamTimer();\n  goScreen(\"app\");\n  var bnis = document.querySelectorAll(\".bni\");\n  showPage(\"modules\", bnis[1] || null);\n  for (var i = 0; i < bnis.length; i++) bnis[i].classList.remove(\"active\");\n  if (bnis[1]) bnis[1].classList.add(\"active\");\n}\n\nfunction showResult() {\n  stopExamTimer();\n  var total = lData.length;\n  var pct   = total ? Math.round(lScore / total * 100) : 0;\n  var st    = gSt(CU.id);\n  st.scores = st.scores || [];\n  st.scores.push({ type: lType, pct: pct, score: lScore, total: total,\n                   fid: curFid, fname: curFnm, date: dateKey() });\n  if (st.scores.length > 100) st.scores.shift();\n  sSt(CU.id, st);\n  checkBadges();\n\n  document.getElementById(\"l-pf\").style.width = \"100%\";\n  document.getElementById(\"l-ct\").textContent = \"Termine !\";\n\n  var medal = pct >= 90 ? \"&#127942;\" : pct >= 70 ? \"&#127881;\" : pct >= 50 ? \"&#128077;\" : \"&#128170;\";\n  var msg   = pct >= 90 ? \"Maitrise parfaite !\" :\n              pct >= 70 ? \"Tres bien ! Continuez.\" :\n              pct >= 50 ? \"Bien, encore un peu de revision.\" : \"Reessayez, vous progresserez !\";\n\n  var retryBtn = lMissed.length\n    ? \"<button class=\\\"btn btn-ghost btn-full\\\" onclick=\\\"retryMissed()\\\">&#128260; Retravailler les \" + lMissed.length + \" erreurs</button>\"\n    : \"\";\n\n  document.getElementById(\"lcont\").innerHTML =\n    \"<div class=\\\"rscreen\\\">\" +\n    \"<div class=\\\"r-medal\\\">\" + medal + \"</div>\" +\n    \"<div class=\\\"r-score\\\">\" + lScore + \"/\" + total + \"</div>\" +\n    \"<div class=\\\"r-pct\\\">\" + pct + \"% de reussite</div>\" +\n    \"<div class=\\\"r-msg\\\">\" + msg + \"</div>\" +\n    \"<div class=\\\"r-btns\\\">\" +\n      \"<button class=\\\"btn btn-gold btn-full\\\" onclick=\\\"launchLearn(lType,curFid)\\\">&#8635; Recommencer</button>\" +\n      retryBtn +\n      \"<button class=\\\"btn btn-ghost btn-full\\\" onclick=\\\"exitLearn()\\\">&#8592; Autres modules</button>\" +\n    \"</div></div>\";\n  renderDash();\n}\n\nfunction retryMissed() {\n  if (!lMissed.length) return;\n  lData   = lMissed.slice();\n  lIdx    = 0; lScore = 0; lMissed = [];\n  document.getElementById(\"l-pf\").style.width = \"0%\";\n  updProg(); renderStep();\n}\nfunction renderQCM(item, lc) {\n  var opts = \"\";\n  for (var i = 0; i < item.opts.length; i++) {\n    opts += \"<div class=\\\"qopt\\\" id=\\\"o\" + i + \"\\\" data-idx=\\\"\" + i + \"\\\" data-correct=\\\"\" + item.correct + \"\\\"\" +\n            \" onclick=\\\"ansQ(this)\\\">\" +\n            \"<span class=\\\"opt-l\\\">\" + \"ABCD\"[i] + \"</span>\" + esc(item.opts[i]) + \"</div>\";\n  }\n  lc.innerHTML =\n    \"<div class=\\\"qcard\\\">\" +\n      \"<div class=\\\"q-num\\\">Question \" + (lIdx + 1) + \" / \" + lData.length + \"</div>\" +\n      \"<div class=\\\"q-q\\\">\" + esc(item.q) + \"</div>\" +\n      \"<div class=\\\"q-opts\\\">\" + opts + \"</div>\" +\n      \"<div class=\\\"q-exp\\\" id=\\\"q-exp\\\">&#128161; \" + esc(item.exp || \"\") + \"</div>\" +\n    \"</div>\" +\n    \"<button class=\\\"btn btn-ghost btn-full\\\" id=\\\"q-nxt\\\" style=\\\"display:none\\\" onclick=\\\"nextStep()\\\">Suivant &#8594;</button>\";\n}\n\nfunction ansQ(el) {\n  var idx     = parseInt(el.dataset.idx);\n  var correct = parseInt(el.dataset.correct);\n  var opts    = document.querySelectorAll(\".qopt\");\n\n  for (var i = 0; i < opts.length; i++) {\n    if (opts[i].classList.contains(\"correct\") || opts[i].classList.contains(\"wrong\")) return;\n  }\n  for (var i = 0; i < opts.length; i++) opts[i].style.pointerEvents = \"none\";\n  document.getElementById(\"o\" + idx).classList.add(idx === correct ? \"correct\" : \"wrong\");\n  if (idx !== correct) document.getElementById(\"o\" + correct).classList.add(\"correct\");\n  else lScore++;\n  if (idx !== correct) lMissed.push(lData[lIdx]);\n  document.getElementById(\"q-exp\").classList.add(\"show\");\n  document.getElementById(\"q-nxt\").style.display = \"flex\";\n}\n\nfunction renderVF(item, lc) {\n  lc.innerHTML =\n    \"<div class=\\\"vcard\\\">\" +\n      \"<div class=\\\"q-num\\\">Affirmation \" + (lIdx + 1) + \" / \" + lData.length + \"</div>\" +\n      \"<div class=\\\"v-stmt\\\">\" + esc(item.statement) + \"</div>\" +\n      \"<div class=\\\"vf-btns\\\">\" +\n        \"<button class=\\\"vfb\\\" id=\\\"vt\\\" data-given=\\\"true\\\"  data-correct=\\\"\" + item.answer + \"\\\" onclick=\\\"ansVF(this)\\\">&#10003;<span>Vrai</span></button>\" +\n        \"<button class=\\\"vfb\\\" id=\\\"vf2\\\" data-given=\\\"false\\\" data-correct=\\\"\" + item.answer + \"\\\" onclick=\\\"ansVF(this)\\\">&#10005;<span>Faux</span></button>\" +\n      \"</div>\" +\n    \"</div>\" +\n    \"<div class=\\\"v-exp\\\" id=\\\"v-exp\\\">&#128161; \" + esc(item.exp || \"\") + \"</div>\" +\n    \"<button class=\\\"btn btn-ghost btn-full\\\" id=\\\"v-nxt\\\" style=\\\"display:none\\\" onclick=\\\"nextStep()\\\">Suivant &#8594;</button>\";\n}\n\nfunction ansVF(el) {\n  var nxt = document.getElementById(\"v-nxt\");\n  if (nxt.style.display !== \"none\") return;\n  var given   = el.dataset.given   === \"true\";\n  var correct = el.dataset.correct === \"true\";\n  var ok      = (given === correct);\n  if (ok) lScore++; else lMissed.push(lData[lIdx]);\n  el.classList.add(ok ? \"correct\" : \"wrong\");\n  var otherId = (el.id === \"vt\") ? \"vf2\" : \"vt\";\n  var other   = document.getElementById(otherId);\n  if (other) { other.disabled = true; other.style.opacity = \".4\"; }\n  document.getElementById(\"v-exp\").classList.add(\"show\");\n  nxt.style.display = \"flex\";\n}\n\nfunction renderFill(item, lc) {\n  _fillAns      = item.answer;\n  var disp      = esc(item.sentence).replace(\"_____\", \"<span class=\\\"fi-blank\\\">_____</span>\");\n  var hint      = item.hint\n    ? \"<div style=\\\"font-size:12px;color:var(--tx3);margin-bottom:12px\\\">&#128161; Indice : \" + esc(item.hint) + \"</div>\"\n    : \"\";\n  lc.innerHTML =\n    \"<div class=\\\"ficard\\\">\" +\n      \"<div class=\\\"q-num\\\">Phrase \" + (lIdx + 1) + \" / \" + lData.length + \"</div>\" +\n      \"<div class=\\\"fi-q\\\">\" + disp + \"</div>\" +\n      hint +\n      \"<input class=\\\"fi-inp\\\" id=\\\"fi-inp\\\" placeholder=\\\"Votre reponse...\\\" autocomplete=\\\"off\\\" autocapitalize=\\\"off\\\">\" +\n      \"<div class=\\\"fi-ans\\\" id=\\\"fi-ans\\\">&#9989; Reponse : <strong>\" + esc(item.answer) + \"</strong></div>\" +\n    \"</div>\" +\n    \"<button class=\\\"btn btn-gold btn-full\\\" id=\\\"fi-sub\\\" onclick=\\\"checkFill()\\\">Verifier &#8594;</button>\" +\n    \"<button class=\\\"btn btn-ghost btn-full\\\" id=\\\"fi-nxt\\\" style=\\\"display:none;margin-top:8px\\\" onclick=\\\"nextStep()\\\">Suivant &#8594;</button>\";\n\n  var inp = document.getElementById(\"fi-inp\");\n  if (inp) {\n    inp.addEventListener(\"keydown\", function(e) { if (e.key === \"Enter\") checkFill(); });\n    setTimeout(function() { inp.focus(); }, 300);\n  }\n}\n\nfunction checkFill() {\n  var inp = document.getElementById(\"fi-inp\");\n  var nxt = document.getElementById(\"fi-nxt\");\n  if (!inp || nxt.style.display !== \"none\") return;\n  var given   = inp.value.trim().toLowerCase();\n  var correct = _fillAns.trim().toLowerCase();\n  var ok = given === correct ||\n    (correct.length > 3 && given.length >= 3 &&\n     (correct.indexOf(given) !== -1 || given.indexOf(correct) !== -1));\n  inp.classList.add(ok ? \"ok\" : \"ko\");\n  if (ok) lScore++; else lMissed.push(lData[lIdx]);\n  document.getElementById(\"fi-ans\").classList.add(\"show\");\n  document.getElementById(\"fi-sub\").style.display = \"none\";\n  nxt.style.display = \"flex\";\n}\n",'Part2'))return;
+    setTimeout(function(){
+      _prog(85,'Chargement 3/3...');
+      if(!_run("function renderMatch(lc) {\n  if (lIdx === 0) {\n    matchPairs   = [];\n    matchSel     = null;\n    matchMatched = 0;\n    for (var i = 0; i < lData.length; i++) {\n      matchPairs.push({ id: i, term: lData[i].term, definition: lData[i].definition, done: false });\n    }\n  }\n  function shuffle(a) {\n    var b = a.slice();\n    for (var i = b.length - 1; i > 0; i--) {\n      var j = Math.floor(Math.random() * (i + 1));\n      var t = b[i]; b[i] = b[j]; b[j] = t;\n    }\n    return b;\n  }\n  var terms = shuffle(matchPairs.slice());\n  var defs  = shuffle(matchPairs.slice());\n  var th = \"\", dh = \"\";\n  for (var i = 0; i < terms.length; i++) {\n    var p = terms[i];\n    th += \"<div class=\\\"mt \" + (p.done ? \"ok\" : \"\") + \"\\\" id=\\\"mt\" + p.id + \"\\\" data-id=\\\"\" + p.id + \"\\\" onclick=\\\"selT(this)\\\">\" +\n          \"<div class=\\\"mt-w\\\">\" + esc(p.term) + \"</div>\" +\n          \"<div class=\\\"mt-d\\\">\" + esc(p.definition) + \"</div></div>\";\n  }\n  for (var i = 0; i < defs.length; i++) {\n    var p = defs[i];\n    dh += \"<div class=\\\"mt \" + (p.done ? \"ok\" : \"\") + \"\\\" id=\\\"md\" + p.id + \"\\\" data-id=\\\"\" + p.id + \"\\\" onclick=\\\"selD(this)\\\">\" +\n          \"<div class=\\\"mt-w\\\" style=\\\"font-size:12px;font-weight:400;line-height:1.4;color:var(--tx2)\\\">\" + esc(p.definition) + \"</div></div>\";\n  }\n  lc.innerHTML =\n    \"<div class=\\\"match-instr\\\">Associez chaque terme a sa definition</div>\" +\n    \"<div class=\\\"match-wrap\\\"><div>\" + th + \"</div><div>\" + dh + \"</div></div>\";\n  updProg();\n}\n\nfunction selT(el) {\n  matchSel = { type: \"term\", id: parseInt(el.dataset.id) };\n  document.querySelectorAll(\".mt\").forEach(function(e) { e.classList.remove(\"sel\"); });\n  el.classList.add(\"sel\");\n}\n\nfunction selD(el) {\n  if (!matchSel) return;\n  var tid = matchSel.id;\n  var did = parseInt(el.dataset.id);\n  if (tid === did) {\n    matchPairs[tid].done = true; matchMatched++; lScore++;\n    var tel = document.getElementById(\"mt\" + tid);\n    var del = document.getElementById(\"md\" + did);\n    if (tel) { tel.classList.remove(\"sel\"); tel.classList.add(\"ok\"); }\n    if (del) del.classList.add(\"ok\");\n    if (matchMatched === matchPairs.length) { lIdx = lData.length; showResult(); }\n  } else {\n    var tel = document.getElementById(\"mt\" + tid);\n    var del = document.getElementById(\"md\" + did);\n    lMissed.push(lData[tid]);\n    if (tel) tel.classList.add(\"ko\");\n    if (del) del.classList.add(\"ko\");\n    setTimeout(function() {\n      var t2 = document.getElementById(\"mt\" + tid);\n      var d2 = document.getElementById(\"md\" + did);\n      if (t2) t2.classList.remove(\"ko\", \"sel\");\n      if (d2) d2.classList.remove(\"ko\");\n    }, 700);\n  }\n  matchSel = null;\n}\nvar examTimer    = null;\nvar examSeconds  = 0;\n\nfunction startExamTimer() {\n  var mins = lData.length * 2; // 2 min per question\n  examSeconds = mins * 60;\n  stopExamTimer();\n  renderTimerBadge();\n  examTimer = setInterval(function() {\n    examSeconds--;\n    renderTimerBadge();\n    if (examSeconds <= 0) {\n      stopExamTimer();\n      autoFinishExam();\n    }\n  }, 1000);\n}\n\nfunction stopExamTimer() {\n  if (examTimer) { clearInterval(examTimer); examTimer = null; }\n  var badge = document.getElementById(\"l-badge\");\n  if (badge) badge.style.display = \"none\";\n}\n\nfunction renderTimerBadge() {\n  var badge = document.getElementById(\"l-badge\");\n  if (!badge) return;\n  badge.style.display = \"flex\";\n  var m = Math.floor(examSeconds / 60);\n  var s = examSeconds % 60;\n  badge.textContent = (m < 10 ? \"0\" : \"\") + m + \":\" + (s < 10 ? \"0\" : \"\") + s;\n  badge.className   = \"l-badge\" + (examSeconds < 60 ? \" l-badge-warn\" : \"\");\n}\n\nfunction autoFinishExam() {\n\n  notify(\"Temps ecoule !\", true);\n  showResult();\n}\n\nfunction renderExamStep(item, lc) {\n  if (item.type === \"qcm\") {\n    renderQCM(item, lc);\n  } else if (item.type === \"vf\") {\n\n    renderVF(item, lc);\n  } else if (item.type === \"fill\") {\n    renderFill(item, lc);\n  } else {\n    nextStep(); // skip unknown type\n  }\n}\n\nfunction renderSummary(md) {\n  var html = md\n    .replace(/^### (.+)$/gm, \"<h3>$1</h3>\")\n    .replace(/^## (.+)$/gm,  \"<h2>$1</h2>\")\n    .replace(/^# (.+)$/gm,   \"<h1>$1</h1>\")\n    .replace(/\\*\\*(.+?)\\*\\*/g, \"<strong>$1</strong>\")\n    .replace(/\\*(.+?)\\*/g,   \"<em>$1</em>\")\n    .replace(/^[-*] (.+)$/gm, \"<li>$1</li>\")\n    .replace(/(<li>.+<\\/li>\\n?)+/g, function(m) { return \"<ul>\" + m + \"</ul>\"; })\n    .replace(/\\n\\n/g, \"<br><br>\")\n    .replace(/\\n/g,   \"<br>\");\n\n  document.getElementById(\"l-pf\").style.width = \"100%\";\n  document.getElementById(\"l-ct\").textContent = \"Termine\";\n  document.getElementById(\"lcont\").innerHTML =\n    \"<div class=\\\"sumc\\\">\" + html + \"</div>\" +\n    \"<div style=\\\"margin-top:18px\\\">\" +\n    \"<button class=\\\"btn btn-ghost btn-full\\\" onclick=\\\"exitLearn()\\\">&#8592; Retour aux modules</button>\" +\n    \"</div>\";\n}\n\nfunction renderGlossary(text) {\n  var items = [];\n  try {\n    var clean = text.replace(/```json\\n?/g, \"\").replace(/```\\n?/g, \"\").trim();\n    items = JSON.parse(clean);\n  } catch(e) {\n    document.getElementById(\"lcont\").innerHTML =\n      \"<div class=\\\"gload\\\"><div style=\\\"font-size:44px\\\">&#9888;</div>\" +\n      \"<div class=\\\"g-t\\\">Erreur de format</div>\" +\n      \"<div class=\\\"g-s\\\">Reessayez</div>\" +\n      \"<button class=\\\"btn btn-ghost\\\" style=\\\"margin-top:20px\\\" onclick=\\\"exitLearn()\\\">&#8592; Retour</button></div>\";\n    return;\n  }\n  document.getElementById(\"l-pf\").style.width = \"100%\";\n  document.getElementById(\"l-ct\").textContent = items.length + \" termes\";\n\n  items.sort(function(a, b) { return a.term.localeCompare(b.term); });\n\n  var search = \"<input type=\\\"search\\\" class=\\\"srch\\\" placeholder=\\\"Rechercher un terme...\\\" \" +\n               \"id=\\\"gloss-srch\\\" oninput=\\\"filterGloss(this.value)\\\" style=\\\"margin-bottom:12px\\\">\";\n  var list   = \"\";\n  for (var i = 0; i < items.length; i++) {\n    list += \"<div class=\\\"gloss-item\\\" data-term=\\\"\" + esc(items[i].term.toLowerCase()) + \"\\\">\" +\n            \"<div class=\\\"gloss-term\\\">\" + esc(items[i].term) + \"</div>\" +\n            \"<div class=\\\"gloss-def\\\">\"  + esc(items[i].definition) + \"</div>\" +\n            \"</div>\";\n  }\n  document.getElementById(\"lcont\").innerHTML =\n    search +\n    \"<div id=\\\"gloss-list\\\">\" + list + \"</div>\" +\n    \"<div style=\\\"margin-top:18px\\\">\" +\n    \"<button class=\\\"btn btn-ghost btn-full\\\" onclick=\\\"exitLearn()\\\">&#8592; Retour aux modules</button>\" +\n    \"</div>\";\n}\n\nfunction filterGloss(q) {\n  q = q.toLowerCase();\n  var items = document.querySelectorAll(\".gloss-item\");\n  for (var i = 0; i < items.length; i++) {\n    var term = items[i].dataset.term || \"\";\n    items[i].style.display = (!q || term.indexOf(q) !== -1) ? \"\" : \"none\";\n  }\n}\nfunction renderStats() {\n  if (!CU) return;\n  var st     = gSt(CU.id);\n  var scores = st.scores || [];\n  var page   = document.getElementById(\"page-stats\");\n  if (!page) return;\n\n  var byType = {};\n  for (var i = 0; i < scores.length; i++) {\n    var s = scores[i];\n    var t = s.type || \"unknown\";\n    if (!byType[t]) byType[t] = { sum: 0, count: 0 };\n    byType[t].sum   += (s.pct !== undefined ? s.pct : s);\n    byType[t].count++;\n  }\n\n  var recent = scores.slice(-14);\n  var chartBars = \"\";\n  for (var i = 0; i < recent.length; i++) {\n    var s   = recent[i];\n    var pct = s.pct !== undefined ? s.pct : s;\n    var col = pct >= 70 ? \"var(--green2)\" : pct >= 50 ? \"var(--gold)\" : \"var(--red2)\";\n    chartBars +=\n      \"<div class=\\\"bar-wrap\\\">\" +\n        \"<div class=\\\"bar\\\" style=\\\"height:\" + pct + \"%;background:\" + col + \"\\\" title=\\\"\" + pct + \"%\\\"></div>\" +\n        \"<div class=\\\"bar-lbl\\\">\" + pct + \"</div>\" +\n      \"</div>\";\n  }\n  if (!chartBars) chartBars = \"<div style=\\\"color:var(--tx3);font-size:13px;padding:20px\\\">Aucune session encore.</div>\";\n\n  var moduleRows = \"\";\n  var modIcons   = { flashcard:\"\\uD83C\\uDFB3\", qcm:\"\\uD83C\\uDFAF\", vf:\"\\u26A1\",\n                     fill:\"\\u270F\\uFE0F\", match:\"\\uD83D\\uDD17\", summary:\"\\uD83D\\uDCDD\",\n                     exam:\"\\uD83C\\uDF93\", glossary:\"\\uD83D\\uDCDA\" };\n  for (var t in byType) {\n    var avg = Math.round(byType[t].sum / byType[t].count);\n    moduleRows +=\n      \"<div class=\\\"stat-row\\\">\" +\n        \"<span class=\\\"sr-ic\\\">\" + (modIcons[t] || \"?\") + \"</span>\" +\n        \"<span class=\\\"sr-nm\\\">\" + (MNAMES[t] || t) + \"</span>\" +\n        \"<span class=\\\"sr-cnt\\\">\" + byType[t].count + \" sessions</span>\" +\n        \"<div class=\\\"sr-bar\\\">\" +\n          \"<div class=\\\"sr-fill\\\" style=\\\"width:\" + avg + \"%;background:\" +\n            (avg >= 70 ? \"var(--green2)\" : avg >= 50 ? \"var(--gold)\" : \"var(--red2)\") + \"\\\"></div>\" +\n        \"</div>\" +\n        \"<span class=\\\"sr-pct\\\">\" + avg + \"%</span>\" +\n      \"</div>\";\n  }\n  if (!moduleRows) moduleRows = \"<div style=\\\"color:var(--tx3);font-size:13px\\\">Aucune donnee encore.</div>\";\n\n  var badgesHtml = renderBadgesHTML(st.badges || []);\n\n  var goal      = (st.goals && st.goals.dailyMin) || 20;\n  var todaySess = scores.filter(function(s) { return s.date === dateKey(); }).length;\n  var goalPct   = Math.min(100, Math.round(todaySess * 10 / goal * 100));\n\n  page.innerHTML =\n    \"<div class=\\\"pg-title\\\">Statistiques</div>\" +\n    \"<div class=\\\"pg-sub\\\">Votre progression en detail</div>\" +\n\n    \"<div class=\\\"goal-card\\\">\" +\n      \"<div class=\\\"goal-top\\\">\" +\n        \"<span>\\uD83C\\uDFAF Objectif du jour</span>\" +\n        \"<span>\" + todaySess + \" / \" + Math.ceil(goal / 10) + \" sessions</span>\" +\n      \"</div>\" +\n      \"<div class=\\\"prog-bar\\\" style=\\\"margin:8px 0 6px\\\">\" +\n        \"<div class=\\\"prog-fill\\\" style=\\\"width:\" + goalPct + \"%\\\"></div>\" +\n      \"</div>\" +\n      \"<div style=\\\"font-size:11px;color:var(--tx3)\\\">\" +\n        \"Objectif : \" + goal + \" min/jour \\u2014 \" +\n        \"<span style=\\\"cursor:pointer;color:var(--gold2)\\\" onclick=\\\"openGoalModal()\\\">Modifier</span>\" +\n      \"</div>\" +\n    \"</div>\" +\n\n    \"<div class=\\\"sec-ttl\\\">14 dernieres sessions</div>\" +\n    \"<div class=\\\"chart-wrap\\\">\" + chartBars + \"</div>\" +\n\n    \"<div class=\\\"sec-ttl\\\">Par module</div>\" +\n    \"<div class=\\\"module-stats\\\">\" + moduleRows + \"</div>\" +\n\n    \"<div class=\\\"sec-ttl\\\">Badges</div>\" +\n    \"<div class=\\\"badges-grid\\\">\" + badgesHtml + \"</div>\";\n}\n\nvar ALL_BADGES = [\n  { id: \"first\",    label: \"Premiere session\",  icon: \"\\uD83C\\uDF1F\", check: function(st) { return (st.sessions||0) >= 1; } },\n  { id: \"streak3\",  label: \"3 jours de suite\",  icon: \"\\uD83D\\uDD25\", check: function(st) { return (st.streak||0) >= 3; } },\n  { id: \"streak7\",  label: \"7 jours de suite\",  icon: \"\\uD83C\\uDF4E\", check: function(st) { return (st.streak||0) >= 7; } },\n  { id: \"streak30\", label: \"30 jours de suite\", icon: \"\\uD83C\\uDFC6\", check: function(st) { return (st.streak||0) >= 30; } },\n  { id: \"perfect\",  label: \"Score parfait\",     icon: \"\\uD83E\\uDD47\", check: function(st) {\n    return (st.scores||[]).some(function(s) { return (s.pct !== undefined ? s.pct : s) === 100; });\n  }},\n  { id: \"s10\",      label: \"10 sessions\",       icon: \"\\uD83D\\uDCDA\", check: function(st) { return (st.sessions||0) >= 10; } },\n  { id: \"s50\",      label: \"50 sessions\",       icon: \"\\uD83D\\uDEF8\", check: function(st) { return (st.sessions||0) >= 50; } },\n  { id: \"avg80\",    label: \"Moyenne >= 80%\",    icon: \"\\uD83E\\uDD8A\", check: function(st) {\n    var sc = (st.scores||[]).map(function(s) { return s.pct !== undefined ? s.pct : s; });\n    if (!sc.length) return false;\n    return sc.reduce(function(a,b){return a+b;},0)/sc.length >= 80;\n  }},\n  { id: \"allmod\",   label: \"Tous les modules\",  icon: \"\\uD83C\\uDF08\", check: function(st) {\n    var types = {};\n    (st.scores||[]).forEach(function(s) { if (s.type) types[s.type] = 1; });\n    return types.flashcard && types.qcm && types.vf && types.fill && types.match;\n  }}\n];\n\nfunction checkBadges() {\n  if (!CU) return;\n  var st  = gSt(CU.id);\n  st.badges = st.badges || [];\n  var newBadge = false;\n  for (var i = 0; i < ALL_BADGES.length; i++) {\n    var b = ALL_BADGES[i];\n    if (st.badges.indexOf(b.id) === -1 && b.check(st)) {\n      st.badges.push(b.id);\n      newBadge = true;\n      notify(b.icon + \" Badge debloque : \" + b.label, \"ok\");\n    }\n  }\n  if (newBadge) sSt(CU.id, st);\n}\n\nfunction renderBadgesHTML(earned) {\n  var html = \"\";\n  for (var i = 0; i < ALL_BADGES.length; i++) {\n    var b  = ALL_BADGES[i];\n    var ok = earned.indexOf(b.id) !== -1;\n    html +=\n      \"<div class=\\\"badge \" + (ok ? \"badge-on\" : \"badge-off\") + \"\\\">\" +\n        \"<div class=\\\"badge-ic\\\">\" + b.icon + \"</div>\" +\n        \"<div class=\\\"badge-lb\\\">\" + b.label + \"</div>\" +\n      \"</div>\";\n  }\n  return html;\n}\n\nfunction openGoalModal() {\n  var st   = gSt(CU.id);\n  var goal = (st.goals && st.goals.dailyMin) || 20;\n  var mc   = document.getElementById(\"mc\");\n  mc.innerHTML =\n    \"<div class=\\\"m-t\\\">\\uD83C\\uDFAF Objectif quotidien</div>\" +\n    \"<div class=\\\"m-s\\\">Combien de minutes souhaitez-vous etudier par jour ?</div>\" +\n    \"<label class=\\\"m-lb\\\">Minutes par jour</label>\" +\n    \"<input class=\\\"m-in\\\" id=\\\"m-goal\\\" type=\\\"number\\\" min=\\\"5\\\" max=\\\"240\\\" value=\\\"\" + goal + \"\\\">\" +\n    \"<button class=\\\"btn btn-gold btn-full\\\" onclick=\\\"saveGoal()\\\">Enregistrer</button>\";\n  openModal();\n}\n\nfunction saveGoal() {\n  var val = parseInt(document.getElementById(\"m-goal\").value);\n  if (isNaN(val) || val < 5) { notify(\"Minimum 5 minutes\", true); return; }\n  var st = gSt(CU.id);\n  st.goals = st.goals || {};\n  st.goals.dailyMin = val;\n  sSt(CU.id, st);\n  closeModal();\n  renderStats();\n  notify(\"Objectif mis a jour\", \"ok\");\n}\nvar pomState    = \"idle\";   // idle | work | break\nvar pomInterval = null;\nvar pomRemaining = 0;\nvar pomWorkMin  = 25;\nvar pomBreakMin = 5;\nvar pomCycles   = 0;\n\nfunction renderPomodoro() {\n  var page = document.getElementById(\"page-pomodoro\");\n  if (!page) return;\n  var st     = gSt(CU.id);\n  var total  = st.pomodoroTotal || 0;\n\n  page.innerHTML =\n    \"<div class=\\\"pg-title\\\">Pomodoro</div>\" +\n    \"<div class=\\\"pg-sub\\\">Travaillez par sessions chronometrees</div>\" +\n\n    \"<div class=\\\"pom-card\\\">\" +\n      \"<div class=\\\"pom-state\\\" id=\\\"pom-state\\\">\" + pomStateLabel() + \"</div>\" +\n      \"<div class=\\\"pom-ring\\\">\" +\n        \"<svg viewBox=\\\"0 0 120 120\\\" id=\\\"pom-svg\\\">\" +\n          \"<circle cx=\\\"60\\\" cy=\\\"60\\\" r=\\\"54\\\" fill=\\\"none\\\" stroke=\\\"var(--surf3)\\\" stroke-width=\\\"8\\\"/>\" +\n          \"<circle cx=\\\"60\\\" cy=\\\"60\\\" r=\\\"54\\\" fill=\\\"none\\\" stroke=\\\"\" + pomStateColor() + \"\\\" stroke-width=\\\"8\\\"\" +\n            \" stroke-dasharray=\\\"339.3\\\" stroke-dashoffset=\\\"\" + pomDashOffset() + \"\\\"\" +\n            \" stroke-linecap=\\\"round\\\" transform=\\\"rotate(-90 60 60)\\\" id=\\\"pom-arc\\\"/>\" +\n        \"</svg>\" +\n        \"<div class=\\\"pom-time\\\" id=\\\"pom-time\\\">\" + fmtPomTime(pomRemaining || pomWorkMin * 60) + \"</div>\" +\n      \"</div>\" +\n      \"<div class=\\\"pom-cycles\\\">Cycles completes : <strong id=\\\"pom-cycles\\\">\" + pomCycles + \"</strong></div>\" +\n      \"<div class=\\\"pom-btns\\\">\" +\n        \"<button class=\\\"btn btn-gold\\\" id=\\\"pom-start\\\" onclick=\\\"pomToggle()\\\">\" + pomBtnLabel() + \"</button>\" +\n        \"<button class=\\\"btn btn-ghost\\\" onclick=\\\"pomReset()\\\">&#8635; Reset</button>\" +\n      \"</div>\" +\n      \"<div class=\\\"pom-settings\\\">\" +\n        \"<label class=\\\"m-lb\\\">Travail (min)</label>\" +\n        \"<input class=\\\"m-in\\\" id=\\\"pom-w\\\" type=\\\"number\\\" min=\\\"1\\\" max=\\\"60\\\" value=\\\"\" + pomWorkMin + \"\\\" oninput=\\\"pomSetWork(this.value)\\\">\" +\n        \"<label class=\\\"m-lb\\\">Pause (min)</label>\" +\n        \"<input class=\\\"m-in\\\" id=\\\"pom-b\\\" type=\\\"number\\\" min=\\\"1\\\" max=\\\"30\\\" value=\\\"\" + pomBreakMin + \"\\\" oninput=\\\"pomSetBreak(this.value)\\\">\" +\n      \"</div>\" +\n    \"</div>\" +\n    \"<div class=\\\"goal-card\\\" style=\\\"margin-top:12px\\\">\" +\n      \"<div style=\\\"font-size:13px;font-weight:600\\\">Total Pomodoros : \" + total + \"</div>\" +\n      \"<div style=\\\"font-size:11px;color:var(--tx3);margin-top:3px\\\">\" + Math.floor(total * pomWorkMin) + \" minutes de travail total</div>\" +\n    \"</div>\";\n}\n\nfunction pomStateLabel() {\n  if (pomState === \"work\")  return \"\\uD83D\\uDD34 Concentration\";\n  if (pomState === \"break\") return \"\\uD83D\\uDFE2 Pause\";\n  return \"\\u23F8 En attente\";\n}\nfunction pomStateColor() {\n  if (pomState === \"work\")  return \"var(--red2)\";\n  if (pomState === \"break\") return \"var(--green2)\";\n  return \"var(--gold)\";\n}\nfunction pomBtnLabel() {\n  if (pomState === \"idle\")  return \"&#9654; Demarrer\";\n  if (pomState === \"work\")  return \"&#9646;&#9646; Pause\";\n  if (pomState === \"break\") return \"&#9654; Reprendre\";\n  return \"&#9654; Demarrer\";\n}\nfunction fmtPomTime(sec) {\n  var m = Math.floor(sec / 60);\n  var s = sec % 60;\n  return (m < 10 ? \"0\" : \"\") + m + \":\" + (s < 10 ? \"0\" : \"\") + s;\n}\nfunction pomDashOffset() {\n  var total    = (pomState === \"break\" ? pomBreakMin : pomWorkMin) * 60;\n  var current  = pomRemaining || total;\n  var progress = total > 0 ? (current / total) : 1;\n  return 339.3 * (1 - progress);\n}\n\nfunction pomUpdateUI() {\n  var t  = document.getElementById(\"pom-time\");\n  var a  = document.getElementById(\"pom-arc\");\n  var st = document.getElementById(\"pom-state\");\n  var bt = document.getElementById(\"pom-start\");\n  var cy = document.getElementById(\"pom-cycles\");\n  if (t)  t.textContent  = fmtPomTime(pomRemaining);\n  if (a)  { a.setAttribute(\"stroke-dashoffset\", pomDashOffset()); a.setAttribute(\"stroke\", pomStateColor()); }\n  if (st) st.textContent = pomStateLabel();\n  if (bt) bt.innerHTML   = pomBtnLabel();\n  if (cy) cy.textContent = pomCycles;\n}\n\nfunction pomToggle() {\n  if (pomState === \"idle\" || pomState === \"break\") {\n    pomState     = \"work\";\n    pomRemaining = pomRemaining || pomWorkMin * 60;\n    pomStartInterval();\n  } else if (pomState === \"work\") {\n\n    clearInterval(pomInterval); pomInterval = null;\n    pomState = \"break\";\n    pomRemaining = pomBreakMin * 60;\n    pomStartInterval();\n  }\n  pomUpdateUI();\n}\n\nfunction pomStartInterval() {\n  if (pomInterval) clearInterval(pomInterval);\n  pomInterval = setInterval(function() {\n    pomRemaining--;\n    if (pomRemaining <= 0) {\n      if (pomState === \"work\") {\n        pomCycles++;\n        var st = gSt(CU.id);\n        st.pomodoroTotal = (st.pomodoroTotal || 0) + 1;\n        sSt(CU.id, st);\n        checkBadges();\n        notify(\"\\uD83C\\uDF4E Pomodoro termine ! Prenez une pause.\", \"ok\");\n        pomState     = \"break\";\n        pomRemaining = pomBreakMin * 60;\n      } else {\n        notify(\"\\u23F0 Pause terminee ! Pret a travailler.\", \"ok\");\n        pomState     = \"idle\";\n        pomRemaining = pomWorkMin * 60;\n        clearInterval(pomInterval); pomInterval = null;\n      }\n    }\n    pomUpdateUI();\n  }, 1000);\n}\n\nfunction pomReset() {\n  clearInterval(pomInterval); pomInterval = null;\n  pomState     = \"idle\";\n  pomRemaining = pomWorkMin * 60;\n  pomUpdateUI();\n}\n\nfunction pomSetWork(v) {\n  var n = parseInt(v);\n  if (n >= 1 && n <= 60) { pomWorkMin = n; if (pomState === \"idle\") pomRemaining = n * 60; pomUpdateUI(); }\n}\nfunction pomSetBreak(v) {\n  var n = parseInt(v);\n  if (n >= 1 && n <= 30) { pomBreakMin = n; pomUpdateUI(); }\n}\nfunction openModal() {\n  document.getElementById(\"modal\").classList.add(\"open\");\n}\n\nfunction closeModal() {\n  document.getElementById(\"modal\").classList.remove(\"open\");\n}\n\nfunction openModalType(type, extra) {\n  if (type === \"folder\")     { openFolderModal(); return; }\n  if (type === \"addCourse\")  { openAC(extra);     return; }\n  if (type === \"pickFolder\") { openPickFolder(extra); return; }\n  if (type === \"goal\")       { openGoalModal();   return; }\n}\nvar AN = { deepseek: \"DeepSeek\", local: \"IA Locale\", groq: \"Groq\", claude: \"Claude\", openai: \"ChatGPT\", gemini: \"Gemini\" };\n\nfunction initAIStatusUI() {\n  var tog = document.getElementById(\"local-ai-toggle\");\n  var sta = document.getElementById(\"local-ai-status\");\n  if (!tog || !sta) return;\n\n  loadAIMode();\n  loadExtraInfo();\n\n  var ta = document.getElementById(\"extra-info-ta\");\n  if (ta) ta.value = _extraInfo;\n\n  if (!hasWebGPU()) {\n    sta.textContent = \"WebGPU non supporte sur cet appareil \u2014 mode cloud uniquement\";\n    tog.disabled = true;\n    return;\n  }\n  sta.textContent = \"WebGPU disponible \" + (_localReady ? \"\u2014 Phi-3 Mini pret\" : \"\u2014 Modele non charge\");\n  tog.checked = _useLocal;\n}\n\nfunction toggleLocalAI(enabled) {\n  if (!hasWebGPU()) {\n    notify(\"WebGPU non supporte sur cet appareil\", true);\n    document.getElementById(\"local-ai-toggle\").checked = false;\n    return;\n  }\n  if (enabled) {\n    setAIMode(true);\n    if (!_localReady) loadLocalModel();\n    else { notify(\"IA locale active\", false); updateAIStatusUI(\"Phi-3 Mini pret et actif\"); }\n  } else {\n    setAIMode(false);\n    notify(\"Mode cloud active\", false);\n    updateAIStatusUI(\"Mode cloud \u2014 \" + (CU ? (AN[CU.ai]||CU.ai) : \"Groq\"));\n  }\n}\n\nfunction loadLocalModel() {\n  var prog = document.getElementById(\"local-ai-progress\");\n  var bar  = document.getElementById(\"local-ai-bar\");\n  var msg  = document.getElementById(\"local-ai-msg\");\n  var sta  = document.getElementById(\"local-ai-status\");\n  if (prog) prog.style.display = \"block\";\n  if (sta)  sta.textContent = \"Telechargement de Phi-3 Mini (2.3 GB \u2014 une seule fois)...\";\n  notify(\"Telechargement Phi-3 Mini en cours... (2.3 GB)\", false);\n\n  initLocalAI(\n    function(text, pct) {\n      if (bar) bar.style.width = Math.round((pct||0)*100) + \"%\";\n      if (msg) msg.textContent = text || \"Chargement...\";\n    },\n    function() {\n      if (prog) prog.style.display = \"none\";\n      updateAIStatusUI(\"Phi-3 Mini pret et actif\");\n      notify(\"IA locale prete ! Generation sans internet activee.\", false);\n      _localReady = true; _useLocal = true;\n    },\n    function(err) {\n      if (prog) prog.style.display = \"none\";\n      setAIMode(false);\n      var tog = document.getElementById(\"local-ai-toggle\");\n      if (tog) tog.checked = false;\n      updateAIStatusUI(\"Erreur : \" + err + \" \u2014 mode cloud actif\");\n      notify(\"IA locale indisponible \u2014 mode cloud actif\", true);\n    }\n  );\n}\n\nfunction updateAIStatusUI(text) {\n  var sta = document.getElementById(\"local-ai-status\");\n  if (sta) sta.textContent = text;\n}\n\nfunction renderReview() {\n  var cont = document.getElementById(\"review-content\");\n  if (!cont || !CU) return;\n  var fs  = gF(CU.id);\n  var now = new Date();\n  var due = [], upcoming = [];\n\n  for (var i = 0; i < fs.length; i++) {\n    var fid    = fs[i].id;\n    var fname  = fs[i].name;\n    var cached = gCache(CU.id, fid, \"flashcard\");\n    if (!cached || !Array.isArray(cached.data)) continue;\n    var srData = gSR(CU.id, fid);\n    for (var j = 0; j < cached.data.length; j++) {\n      var sr = srData[\"fc_\" + j];\n      if (!sr) {\n        due.push({ folder: fname, fid: fid, idx: j, card: cached.data[j], sr: null });\n      } else {\n        var diff = Math.ceil((new Date(sr.due) - now) / 86400000);\n        if (diff <= 0)      due.push({ folder: fname, fid: fid, idx: j, card: cached.data[j], sr: sr });\n        else if (diff <= 3) upcoming.push({ folder: fname, fid: fid, idx: j, card: cached.data[j], sr: sr, diff: diff });\n      }\n    }\n  }\n\n  if (!fs.length) { cont.innerHTML = rvEmpty(\"Aucun dossier\", \"Creez un dossier et ajoutez des cours pour commencer.\"); return; }\n  if (!due.length && !upcoming.length) { cont.innerHTML = rvEmpty(\"Tout est a jour !\", \"Aucune carte a revoir aujourd'hui. Revenez demain !\"); return; }\n\n  var h = \"\";\n  if (due.length) {\n    h += \"<div style='background:linear-gradient(135deg,var(--gold),var(--gold2));border-radius:16px;padding:20px;margin-bottom:20px;text-align:center'>\" +\n         \"<div style='font-size:36px;margin-bottom:6px'>&#129504;</div>\" +\n         \"<div style='font-size:22px;font-weight:700;color:#0e0f14'>\" + due.length + \" carte\" + (due.length>1?\"s\":\"\") + \" a reviser</div>\" +\n         \"<div style='font-size:13px;color:#0e0f1488;margin:4px 0 14px'>Repetition espacee SM-2</div>\" +\n         \"<button class='btn' style='background:#0e0f14;color:var(--gold);border:none;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:700' onclick='startReviewSession()'>&#9654; Reviser maintenant</button>\" +\n         \"</div>\";\n  }\n\n  var byFolder = {};\n  for (var i = 0; i < due.length; i++) {\n    if (!byFolder[due[i].fid]) byFolder[due[i].fid] = { name: due[i].folder, cards: [] };\n    byFolder[due[i].fid].cards.push(due[i]);\n  }\n  var fids = Object.keys(byFolder);\n  for (var i = 0; i < fids.length; i++) {\n    var fd = byFolder[fids[i]];\n    h += \"<div style='background:var(--card);border-radius:14px;padding:16px;margin-bottom:14px'>\" +\n         \"<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:12px'>\" +\n         \"<div style='font-weight:700;color:var(--tx1)'>\" + esc(fd.name) + \"</div>\" +\n         \"<span class='chip chip-r'>\" + fd.cards.length + \" dues</span></div>\";\n    for (var j = 0; j < Math.min(fd.cards.length, 3); j++) {\n      var sr = fd.cards[j].sr;\n      h += \"<div style='background:var(--bg2);border-radius:10px;padding:10px 14px;margin-bottom:8px;font-size:13px'>\" +\n           \"<div style='color:var(--tx1);font-weight:600'>\" + esc(fd.cards[j].card.front) + \"</div>\" +\n           \"<div style='color:var(--tx3);font-size:11px;margin-top:2px'>\" + (sr ? \"intervalle \"+sr.interval+\"j\" : \"jamais vue\") + \"</div></div>\";\n    }\n    if (fd.cards.length > 3) h += \"<div style='color:var(--tx3);font-size:12px;text-align:center;padding:4px'>+\" + (fd.cards.length-3) + \" autres...</div>\";\n    h += \"<button class='btn btn-ghost' style='width:100%;margin-top:10px' data-fid='\" + fids[i] + \"' onclick='startFolderReview(this.dataset.fid)'>Reviser ce dossier</button></div>\";\n  }\n\n  if (upcoming.length) {\n    h += \"<div style='margin-top:10px;padding:14px;background:var(--card);border-radius:14px'>\" +\n         \"<div style='font-weight:700;color:var(--tx2);margin-bottom:10px'>&#8987; A venir</div>\";\n    for (var i = 0; i < Math.min(upcoming.length, 5); i++) {\n      var u = upcoming[i];\n      h += \"<div style='display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bdr)'>\" +\n           \"<div style='font-size:13px;color:var(--tx1);flex:1'>\" + esc(u.card.front) + \"</div>\" +\n           \"<span style='font-size:11px;color:var(--tx3);white-space:nowrap;margin-left:10px'>dans \" + u.diff + \"j</span></div>\";\n    }\n    if (upcoming.length > 5) h += \"<div style='color:var(--tx3);font-size:12px;text-align:center;padding-top:8px'>+\" + (upcoming.length-5) + \" autres...</div>\";\n    h += \"</div>\";\n  }\n  cont.innerHTML = h;\n}\n\nfunction rvEmpty(title, msg) {\n  return \"<div style='text-align:center;padding:50px 20px'><div style='font-size:52px;margin-bottom:12px'>&#128218;</div>\" +\n         \"<div style='font-size:18px;font-weight:700;color:var(--tx1);margin-bottom:8px'>\" + title + \"</div>\" +\n         \"<div style='font-size:13px;color:var(--tx3);line-height:1.6'>\" + msg + \"</div></div>\";\n}\n\nfunction startReviewSession() {\n  var fs = gF(CU.id), all = [], now = new Date();\n  for (var i = 0; i < fs.length; i++) {\n    var cached = gCache(CU.id, fs[i].id, \"flashcard\");\n    if (!cached || !Array.isArray(cached.data)) continue;\n    var srData = gSR(CU.id, fs[i].id);\n    for (var j = 0; j < cached.data.length; j++) {\n      var sr = srData[\"fc_\" + j];\n      if (!sr || new Date(sr.due) <= now)\n        all.push({ fid: fs[i].id, fname: fs[i].name, idx: j, card: cached.data[j] });\n    }\n  }\n  if (!all.length) { notify(\"Aucune carte a reviser !\", true); return; }\n  launchReviewCards(all);\n}\n\nfunction startFolderReview(fid) {\n  var fs = gF(CU.id), fname = \"\";\n  for (var i = 0; i < fs.length; i++) if (fs[i].id === fid) { fname = fs[i].name; break; }\n  var cached = gCache(CU.id, fid, \"flashcard\");\n  if (!cached || !Array.isArray(cached.data)) { notify(\"Aucune flashcard pour ce dossier\", true); return; }\n  var srData = gSR(CU.id, fid), now = new Date(), cards = [];\n  for (var j = 0; j < cached.data.length; j++) {\n    var sr = srData[\"fc_\" + j];\n    if (!sr || new Date(sr.due) <= now) cards.push({ fid: fid, fname: fname, idx: j, card: cached.data[j] });\n  }\n  if (!cards.length) { notify(\"Tout est a jour pour ce dossier !\", false); return; }\n  launchReviewCards(cards);\n}\n\nfunction launchReviewCards(cards) {\n  lType = \"flashcard\"; curFid = cards[0].fid; curFnm = \"Revision du jour\";\n  lData = cards.map(function(c) { return c.card; });\n  lIdx = 0; lScore = 0; lMissed = [];\n  document.getElementById(\"l-nm\").textContent = \"Revision du jour\";\n  document.getElementById(\"l-pf\").style.background = \"linear-gradient(90deg,var(--gold),var(--gold2))\";\n  var badge = document.getElementById(\"l-badge\");\n  if (badge) badge.style.display = \"none\";\n  var st = gSt(CU.id); st.sessions = (st.sessions||0)+1; sSt(CU.id, st); updateStreak();\n  goScreen(\"learn\"); renderStep();\n}\n\nvar _origRenderProfile = null;\nif (typeof renderProfile === \"function\") _origRenderProfile = renderProfile;\nfunction renderProfile() {\n  if (_origRenderProfile) _origRenderProfile();\n  setTimeout(initAIStatusUI, 100);\n}\n",'Part3'))return;
+      setTimeout(function(){
+        _prog(100,'Pret !');
+        try{
+          if(typeof init==='function'){init();setTimeout(_hide,400);}
+          else{_showErr('init() introuvable');}
+        }catch(e){_showErr('Erreur init: '+e.message);}
+      },150);
+    },250);
+  },250);
+},100);
+</script>
+</body>
+</html>
